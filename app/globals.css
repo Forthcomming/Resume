@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #e8eef5;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: #0f1924;
+  background-color: var(--background);
+  /* Vyra fog: subtle radial gradient for atmosphere */
+  background-image: radial-gradient(
+    ellipse at 50% 30%,
+    #eef3fa 0%,
+    #e2ebf4 45%,
+    #d8e5f0 100%
+  );
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: white !important;
+    background-image: none !important;
+    overflow: visible !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .resume-print-wrapper {
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .resume-print-wrapper > div {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .resume-print-root {
+    aspect-ratio: auto !important;
+    min-height: 297mm;
+    width: 210mm !important;
+    max-width: none !important;
+    margin: 0 auto;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
