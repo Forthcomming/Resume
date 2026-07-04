@@ -19,17 +19,20 @@ import {
   touchLocalResumeUpdated,
 } from "@/lib/resume/local-storage";
 import {
-  addVersion,
-  composeContent,
-  duplicateVersion,
-  initVersionStore,
-  readVersionStore,
-  renameVersion,
-  saveVersionStore,
-  setSectionSource,
-  updateVersionSection,
+  addSectionSubVersion,
+  composeFromSectionSubVersions,
+  duplicateSectionSubVersion,
+  getActiveSectionContent,
+  getActiveSectionVersionId,
+  getSectionVersions,
+  initSectionSubVersionsStore,
+  readSectionSubVersionsStore,
+  renameSectionSubVersion,
+  saveSectionSubVersionsStore,
+  setActiveSectionVersion,
+  updateActiveSectionContent,
   type SectionId,
-  type VersionStore,
+  type SectionSubVersionsStore,
 } from "@/lib/resume/versions";
 import { applyAIEdit, getEditSlice, requestAIEdit } from "@/lib/ai/client-edit";
 import type { EditTarget, PendingAIEdit } from "@/types/ai-edit";
@@ -43,7 +46,7 @@ interface ResumeEditorProps {
 const storageKey = resumeContentKey;
 
 export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
-  const [versionStore, setVersionStore] = useState<VersionStore | null>(null);
+  const [store, setStore] = useState<SectionSubVersionsStore | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [aiOpenSections, setAiOpenSections] = useState<Record<string, boolean>>({});
@@ -70,31 +73,31 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
       }
     }
 
-    const existing = readVersionStore(id);
+    const existing = readSectionSubVersionsStore(id);
     if (existing) {
-      setVersionStore(existing);
+      setStore(existing);
       return;
     }
 
-    const store = initVersionStore(baseContent);
-    setVersionStore(store);
-    saveVersionStore(id, store);
+    const next = initSectionSubVersionsStore(baseContent);
+    setStore(next);
+    saveSectionSubVersionsStore(id, next);
   }, [id, initialContent]);
 
   const composedContent = useMemo(
-    () => (versionStore ? composeContent(versionStore) : emptyResumeContent()),
-    [versionStore]
+    () => (store ? composeFromSectionSubVersions(store) : emptyResumeContent()),
+    [store]
   );
 
   useEffect(() => {
-    if (!versionStore) return;
+    if (!store) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
     }
     setSaveState("saving");
     const t = setTimeout(async () => {
-      saveVersionStore(id, versionStore);
+      saveSectionSubVersionsStore(id, store);
       const res = await saveResumeContentAction(id, composedContent);
       if (!res.configured) {
         try {
@@ -107,74 +110,74 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
       setSaveState("saved");
     }, 800);
     return () => clearTimeout(t);
-  }, [versionStore, composedContent, id]);
+  }, [store, composedContent, id]);
 
-  const updateStore = useCallback((updater: (s: VersionStore) => VersionStore) => {
-    setVersionStore((prev) => (prev ? updater(prev) : prev));
-  }, []);
-
-  const getSectionContent = useCallback(
-    (sectionId: SectionId): ResumeContent[SectionId] => {
-      if (!versionStore) return emptyResumeContent()[sectionId];
-      const versionId = versionStore.compose[sectionId];
-      const version = versionStore.versions.find((v) => v.id === versionId);
-      return version?.content[sectionId] ?? emptyResumeContent()[sectionId];
+  const updateStore = useCallback(
+    (updater: (s: SectionSubVersionsStore) => SectionSubVersionsStore) => {
+      setStore((prev) => (prev ? updater(prev) : prev));
     },
-    [versionStore]
+    []
   );
 
   const getSectionCardContent = useCallback(
-    (sectionId: SectionId): ResumeContent => ({
-      ...composedContent,
-      [sectionId]: getSectionContent(sectionId),
-    }),
-    [composedContent, getSectionContent]
+    (sectionId: SectionId): ResumeContent => {
+      if (!store) return emptyResumeContent();
+      return {
+        ...composedContent,
+        [sectionId]: getActiveSectionContent(store, sectionId),
+      };
+    },
+    [store, composedContent]
   );
 
   const handleSectionChange = useCallback(
     (sectionId: SectionId, next: ResumeContent) => {
-      if (!versionStore) return;
-      const versionId = versionStore.compose[sectionId];
-      updateStore((s) => updateVersionSection(s, versionId, sectionId, next[sectionId]));
+      updateStore((s) =>
+        updateActiveSectionContent(s, sectionId, next[sectionId])
+      );
     },
-    [versionStore, updateStore]
+    [updateStore]
   );
 
-  const handleSourceVersionChange = useCallback(
+  const handleActiveVersionChange = useCallback(
     (sectionId: SectionId, versionId: string) => {
-      updateStore((s) => setSectionSource(s, sectionId, versionId));
+      updateStore((s) => setActiveSectionVersion(s, sectionId, versionId));
     },
     [updateStore]
   );
 
-  const handleCreateVersion = useCallback(
-    (name: string) => {
-      if (!versionStore) return;
-      updateStore((s) => addVersion(s, name, composedContent));
-    },
-    [versionStore, composedContent, updateStore]
-  );
-
-  const handleRenameVersion = useCallback(
-    (versionId: string, name: string) => {
-      updateStore((s) => renameVersion(s, versionId, name));
+  const handleCreateSubVersion = useCallback(
+    (sectionId: SectionId, name: string) => {
+      updateStore((s) =>
+        addSectionSubVersion(s, sectionId, name, { activate: true })
+      );
     },
     [updateStore]
   );
 
-  const handleDuplicateVersion = useCallback(
-    (versionId: string) => {
-      updateStore((s) => duplicateVersion(s, versionId));
+  const handleRenameSubVersion = useCallback(
+    (sectionId: SectionId, versionId: string, name: string) => {
+      updateStore((s) => renameSectionSubVersion(s, sectionId, versionId, name));
+    },
+    [updateStore]
+  );
+
+  const handleDuplicateSubVersion = useCallback(
+    (sectionId: SectionId, versionId: string) => {
+      updateStore((s) => duplicateSectionSubVersion(s, sectionId, versionId));
     },
     [updateStore]
   );
 
   const runAIEdit = useCallback(
     async (target: EditTarget, instruction: string) => {
-      if (!versionStore) return;
+      if (!store) return;
       const sectionId = target.sectionId;
       const slice = getEditSlice(
-        { ...composedContent, [sectionId]: getSectionContent(sectionId) },
+        {
+          ...composedContent,
+          [sectionId]: getActiveSectionContent(store, sectionId),
+        },
         target
       );
 
@@ -206,27 +209,28 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
         });
       }
     },
-    [versionStore, composedContent, getSectionContent]
+    [store, composedContent]
   );
 
   const handleAIAccept = useCallback(() => {
-    if (!pendingAIEdit || !versionStore || pendingAIEdit.status !== "ready") return;
+    if (!pendingAIEdit || !store || pendingAIEdit.status !== "ready") return;
 
     const { target, suggested } = pendingAIEdit;
     const sectionId = target.sectionId;
-    const versionId = versionStore.compose[sectionId];
-    const currentVersion = versionStore.versions.find((v) => v.id === versionId);
-    if (!currentVersion) return;
+    const currentSection = {
+      ...emptyResumeContent(),
+      [sectionId]: getActiveSectionContent(store, sectionId),
+    };
+    const updated = applyAIEdit(currentSection, target, suggested);
 
-    const updatedContent = applyAIEdit(currentVersion.content, target, suggested);
     updateStore((s) =>
-      updateVersionSection(s, versionId, sectionId, updatedContent[sectionId])
+      updateActiveSectionContent(s, sectionId, updated[sectionId])
     );
 
     setPendingAIEdit(null);
     setAiOpenSections({});
     setBulletAIOpen(null);
-  }, [pendingAIEdit, versionStore, updateStore]);
+  }, [pendingAIEdit, store, updateStore]);
 
   const handleAIReject = useCallback(() => {
     setPendingAIEdit(null);
@@ -255,7 +259,7 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
     window.print();
   }, []);
 
-  if (!versionStore) {
+  if (!store) {
     return (
       <div className="flex h-screen items-center justify-center bg-fog text-ink-muted">
         加载中...
@@ -281,9 +285,20 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
                   section={section}
                   content={getSectionCardContent(sectionId)}
                   onChange={(next) => handleSectionChange(sectionId, next)}
-                  versions={versionStore.versions}
-                  sourceVersionId={versionStore.compose[sectionId]}
-                  onSourceVersionChange={(vid) => handleSourceVersionChange(sectionId, vid)}
+                  versions={getSectionVersions(store, sectionId)}
+                  activeVersionId={getActiveSectionVersionId(store, sectionId)}
+                  onActiveVersionChange={(vid) =>
+                    handleActiveVersionChange(sectionId, vid)
+                  }
+                  onCreateSubVersion={(name) =>
+                    handleCreateSubVersion(sectionId, name)
+                  }
+                  onRenameSubVersion={(vid, name) =>
+                    handleRenameSubVersion(sectionId, vid, name)
+                  }
+                  onDuplicateSubVersion={(vid) =>
+                    handleDuplicateSubVersion(sectionId, vid)
+                  }
                   aiOpen={!!aiOpenSections[section.id]}
                   onToggleAI={() =>
                     setAiOpenSections((prev) => ({
@@ -292,13 +307,22 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
                     }))
                   }
                   pendingAIEdit={pendingAIEdit}
-                  onAIRequest={(instruction) => handleSectionAIRequest(sectionId, instruction)}
+                  onAIRequest={(instruction) =>
+                    handleSectionAIRequest(sectionId, instruction)
+                  }
                   onAIAccept={handleAIAccept}
                   onAIReject={handleAIReject}
                   onBulletAIRequest={
-                    sectionId === "work" || sectionId === "project" || sectionId === "education"
+                    sectionId === "work" ||
+                    sectionId === "project" ||
+                    sectionId === "education"
                       ? (entryIndex, bulletIndex, instruction) =>
-                          handleBulletAIRequest(sectionId, entryIndex, bulletIndex, instruction)
+                          handleBulletAIRequest(
+                            sectionId,
+                            entryIndex,
+                            bulletIndex,
+                            instruction
+                          )
                       : undefined
                   }
                   bulletAIOpen={
@@ -315,9 +339,14 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
                       bulletAIOpen.entryIndex === entryIndex &&
                       bulletAIOpen.bulletIndex === bulletIndex;
                     setBulletAIOpen(
-                      isSame ? null : { sectionId: section.id, entryIndex, bulletIndex }
+                      isSame
+                        ? null
+                        : { sectionId: section.id, entryIndex, bulletIndex }
                     );
-                    setAiOpenSections((prev) => ({ ...prev, [section.id]: false }));
+                    setAiOpenSections((prev) => ({
+                      ...prev,
+                      [section.id]: false,
+                    }));
                   }}
                 />
               );
@@ -327,10 +356,7 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
           <VersionPanel
             open={versionPanelOpen}
             onToggle={() => setVersionPanelOpen((o) => !o)}
-            store={versionStore}
-            onCreateVersion={handleCreateVersion}
-            onRenameVersion={handleRenameVersion}
-            onDuplicateVersion={handleDuplicateVersion}
+            store={store}
           />
           <JDPanel />
         </div>

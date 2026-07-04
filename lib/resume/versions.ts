@@ -6,22 +6,43 @@ import {
 
 export type SectionId = keyof ResumeContent;
 
-export interface ResumeVersion {
+export type SectionCreatedBy = "user" | "ai";
+
+/** One named sub-version within a single section (e.g. ToB / ToC for projects). */
+export interface SectionSubVersion<T = unknown> {
+  id: string;
+  name: string;
+  content: T;
+  createdAt: string;
+  createdBy: SectionCreatedBy;
+}
+
+export interface SectionBucket<T = unknown> {
+  activeVersionId: string;
+  versions: SectionSubVersion<T>[];
+}
+
+export interface SectionSubVersionsStore {
+  schemaVersion: 1;
+  sections: {
+    [K in SectionId]: SectionBucket<ResumeContent[K]>;
+  };
+}
+
+/** @deprecated Old global snapshot model — kept only for migration. */
+interface LegacyResumeVersion {
   id: string;
   name: string;
   content: ResumeContent;
   createdAt: string;
 }
 
-/** Which named version each section pulls content from when composing. */
-export type SectionCompose = Record<SectionId, string>;
-
-export interface VersionStore {
-  versions: ResumeVersion[];
-  compose: SectionCompose;
+interface LegacyVersionStore {
+  versions: LegacyResumeVersion[];
+  compose: Record<SectionId, string>;
 }
 
-const SECTION_IDS: SectionId[] = [
+export const SECTION_IDS: SectionId[] = [
   "basic_info",
   "summary",
   "work",
@@ -30,6 +51,11 @@ const SECTION_IDS: SectionId[] = [
   "skills",
 ];
 
+export function sectionSubVersionsKey(resumeId: string): string {
+  return `resume-section-subversions:${resumeId}`;
+}
+
+/** Legacy key used by the previous global-version composer. */
 export function resumeVersionsKey(resumeId: string): string {
   return `resume-versions:${resumeId}`;
 }
@@ -49,83 +75,210 @@ function jsonClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function defaultCompose(versionId: string): SectionCompose {
-  return SECTION_IDS.reduce(
-    (acc, id) => {
-      acc[id] = versionId;
-      return acc;
-    },
-    {} as SectionCompose
-  );
-}
-
-export function createVersion(
+function createSubVersion<T>(
   name: string,
-  content: ResumeContent,
+  content: T,
+  createdBy: SectionCreatedBy = "user",
   id = newId()
-): ResumeVersion {
+): SectionSubVersion<T> {
   return {
     id,
     name,
-    content: normalizeResumeContent(content),
+    content: jsonClone(content),
     createdAt: nowIso(),
+    createdBy,
   };
 }
 
-/** Build initial store from a single content blob. */
-export function initVersionStore(content: ResumeContent): VersionStore {
-  const defaultVersion = createVersion("默认", content);
+function emptyBucket<K extends SectionId>(
+  sectionId: K,
+  content?: ResumeContent[K]
+): SectionBucket<ResumeContent[K]> {
+  const version = createSubVersion(
+    "默认",
+    content ?? emptyResumeContent()[sectionId],
+    "user"
+  );
   return {
-    versions: [defaultVersion],
-    compose: defaultCompose(defaultVersion.id),
+    activeVersionId: version.id,
+    versions: [version],
   };
 }
 
-export function readVersionStore(resumeId: string): VersionStore | null {
+/** Build store from a flat resume content blob (one default sub-version per section). */
+export function initSectionSubVersionsStore(
+  content: ResumeContent
+): SectionSubVersionsStore {
+  const normalized = normalizeResumeContent(content);
+  return {
+    schemaVersion: 1,
+    sections: {
+      basic_info: emptyBucket("basic_info", normalized.basic_info),
+      summary: emptyBucket("summary", normalized.summary),
+      work: emptyBucket("work", normalized.work),
+      education: emptyBucket("education", normalized.education),
+      project: emptyBucket("project", normalized.project),
+      skills: emptyBucket("skills", normalized.skills),
+    },
+  };
+}
+
+function isSectionSubVersionsStore(
+  value: unknown
+): value is SectionSubVersionsStore {
+  if (!value || typeof value !== "object") return false;
+  const v = value as SectionSubVersionsStore;
+  return v.schemaVersion === 1 && !!v.sections?.basic_info?.versions;
+}
+
+function isLegacyVersionStore(value: unknown): value is LegacyVersionStore {
+  if (!value || typeof value !== "object") return false;
+  const v = value as LegacyVersionStore;
+  return Array.isArray(v.versions) && v.versions.length > 0 && !!v.compose;
+}
+
+function migrateSectionBucket<K extends SectionId>(
+  sectionId: K,
+  legacy: LegacyVersionStore
+): SectionBucket<ResumeContent[K]> {
+  const versions: SectionSubVersion<ResumeContent[K]>[] = [];
+  const seenNames = new Set<string>();
+
+  for (const global of legacy.versions) {
+    const name = global.name?.trim() || "默认";
+    if (seenNames.has(name)) continue;
+    seenNames.add(name);
+    const sectionContent = normalizeResumeContent(global.content)[sectionId];
+    versions.push(createSubVersion(name, sectionContent, "user", newId()));
+  }
+
+  if (versions.length === 0) return emptyBucket(sectionId);
+
+  const activeGlobalId = legacy.compose?.[sectionId];
+  const activeGlobal = legacy.versions.find((v) => v.id === activeGlobalId);
+  const activeName = activeGlobal?.name?.trim() || versions[0].name;
+  const active = versions.find((v) => v.name === activeName) ?? versions[0];
+
+  return {
+    activeVersionId: active.id,
+    versions,
+  };
+}
+
+/** Migrate old global snapshot store into per-section sub-versions. */
+export function migrateLegacyVersionStore(
+  legacy: LegacyVersionStore
+): SectionSubVersionsStore {
+  return {
+    schemaVersion: 1,
+    sections: {
+      basic_info: migrateSectionBucket("basic_info", legacy),
+      summary: migrateSectionBucket("summary", legacy),
+      work: migrateSectionBucket("work", legacy),
+      education: migrateSectionBucket("education", legacy),
+      project: migrateSectionBucket("project", legacy),
+      skills: migrateSectionBucket("skills", legacy),
+    },
+  };
+}
+
+function sanitizeSectionBucket<K extends SectionId>(
+  sectionId: K,
+  bucket: SectionBucket<ResumeContent[K]> | undefined
+): SectionBucket<ResumeContent[K]> {
+  const versions = (bucket?.versions ?? []).map((v) => ({
+    ...v,
+    name: v.name?.trim() || "默认",
+    createdBy: (v.createdBy === "ai" ? "ai" : "user") as SectionCreatedBy,
+    content: jsonClone(
+      v.content ?? emptyResumeContent()[sectionId]
+    ),
+  }));
+
+  if (versions.length === 0) return emptyBucket(sectionId);
+
+  const activeId =
+    versions.find((v) => v.id === bucket?.activeVersionId)?.id ??
+    versions[0].id;
+
+  return {
+    activeVersionId: activeId,
+    versions,
+  };
+}
+
+export function sanitizeSectionSubVersionsStore(
+  store: SectionSubVersionsStore
+): SectionSubVersionsStore {
+  return {
+    schemaVersion: 1,
+    sections: {
+      basic_info: sanitizeSectionBucket("basic_info", store.sections?.basic_info),
+      summary: sanitizeSectionBucket("summary", store.sections?.summary),
+      work: sanitizeSectionBucket("work", store.sections?.work),
+      education: sanitizeSectionBucket("education", store.sections?.education),
+      project: sanitizeSectionBucket("project", store.sections?.project),
+      skills: sanitizeSectionBucket("skills", store.sections?.skills),
+    },
+  };
+}
+
+export function readSectionSubVersionsStore(
+  resumeId: string
+): SectionSubVersionsStore | null {
   if (typeof window === "undefined") return null;
+
   try {
-    const raw = localStorage.getItem(resumeVersionsKey(resumeId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as VersionStore;
-    if (!parsed.versions?.length) return null;
-    return sanitizeVersionStore(parsed);
+    const nextRaw = localStorage.getItem(sectionSubVersionsKey(resumeId));
+    if (nextRaw) {
+      const parsed = JSON.parse(nextRaw);
+      if (isSectionSubVersionsStore(parsed)) {
+        return sanitizeSectionSubVersionsStore(parsed);
+      }
+    }
+  } catch {
+    /* fall through to legacy */
+  }
+
+  try {
+    const legacyRaw = localStorage.getItem(resumeVersionsKey(resumeId));
+    if (!legacyRaw) return null;
+    const legacy = JSON.parse(legacyRaw);
+    if (!isLegacyVersionStore(legacy)) return null;
+    const migrated = migrateLegacyVersionStore(legacy);
+    const sanitized = sanitizeSectionSubVersionsStore(migrated);
+    saveSectionSubVersionsStore(resumeId, sanitized);
+    return sanitized;
   } catch {
     return null;
   }
 }
 
-/** Ensure compose mappings always point at existing versions. */
-export function sanitizeVersionStore(store: VersionStore): VersionStore {
-  const versions = store.versions.map((v) => ({
-    ...v,
-    content: normalizeResumeContent(v.content),
-  }));
-  const fallbackId = versions[0]?.id;
-  if (!fallbackId) return initVersionStore(emptyResumeContent());
-
-  const validIds = new Set(versions.map((v) => v.id));
-  const compose = defaultCompose(fallbackId);
-  for (const sectionId of SECTION_IDS) {
-    const mapped = store.compose?.[sectionId];
-    compose[sectionId] =
-      mapped && validIds.has(mapped) ? mapped : fallbackId;
-  }
-
-  return { versions, compose };
+export function saveSectionSubVersionsStore(
+  resumeId: string,
+  store: SectionSubVersionsStore
+): void {
+  localStorage.setItem(
+    sectionSubVersionsKey(resumeId),
+    JSON.stringify(store)
+  );
 }
 
-export function saveVersionStore(resumeId: string, store: VersionStore): void {
-  localStorage.setItem(resumeVersionsKey(resumeId), JSON.stringify(store));
+export function removeSectionSubVersionsStore(resumeId: string): void {
+  localStorage.removeItem(sectionSubVersionsKey(resumeId));
+  localStorage.removeItem(resumeVersionsKey(resumeId));
 }
 
-/** Merge sections from different named versions into one preview/export content. */
-export function composeContent(store: VersionStore): ResumeContent {
-  const byId = new Map(store.versions.map((v) => [v.id, v]));
-
+/** Merge active sub-versions into one ResumeContent for preview/export/autosave. */
+export function composeFromSectionSubVersions(
+  store: SectionSubVersionsStore
+): ResumeContent {
   const pick = <K extends SectionId>(id: K): ResumeContent[K] => {
-    const versionId = store.compose[id];
-    const version = byId.get(versionId);
-    if (version) return jsonClone(version.content[id]);
+    const bucket = store.sections[id];
+    const active =
+      bucket.versions.find((v) => v.id === bucket.activeVersionId) ??
+      bucket.versions[0];
+    if (active) return jsonClone(active.content);
     return emptyResumeContent()[id];
   };
 
@@ -139,95 +292,154 @@ export function composeContent(store: VersionStore): ResumeContent {
   };
 }
 
-export function addVersion(
-  store: VersionStore,
-  name: string,
-  content: ResumeContent
-): VersionStore {
-  const version = createVersion(name, content);
-  return { ...store, versions: [...store.versions, version] };
+export function getActiveSectionContent<K extends SectionId>(
+  store: SectionSubVersionsStore,
+  sectionId: K
+): ResumeContent[K] {
+  const bucket = store.sections[sectionId];
+  const active =
+    bucket.versions.find((v) => v.id === bucket.activeVersionId) ??
+    bucket.versions[0];
+  return active
+    ? jsonClone(active.content)
+    : emptyResumeContent()[sectionId];
 }
 
-export function renameVersion(
-  store: VersionStore,
-  versionId: string,
-  name: string
-): VersionStore {
+export function getSectionVersions(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId
+): SectionSubVersion[] {
+  return store.sections[sectionId].versions;
+}
+
+export function getActiveSectionVersionId(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId
+): string {
+  return store.sections[sectionId].activeVersionId;
+}
+
+export function setActiveSectionVersion(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId,
+  versionId: string
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
+  if (!bucket.versions.some((v) => v.id === versionId)) return store;
   return {
     ...store,
-    versions: store.versions.map((v) =>
-      v.id === versionId ? { ...v, name: name.trim() || v.name } : v
-    ),
+    sections: {
+      ...store.sections,
+      [sectionId]: { ...bucket, activeVersionId: versionId },
+    },
   };
 }
 
-export function duplicateVersion(
-  store: VersionStore,
-  versionId: string,
-  name?: string
-): VersionStore {
-  const source = store.versions.find((v) => v.id === versionId);
-  if (!source) return store;
-  const copy = createVersion(
-    name ?? `${source.name} 副本`,
-    source.content
-  );
-  return { ...store, versions: [...store.versions, copy] };
-}
-
-export function updateVersionContent(
-  store: VersionStore,
-  versionId: string,
-  content: ResumeContent
-): VersionStore {
-  return {
-    ...store,
-    versions: store.versions.map((v) =>
-      v.id === versionId
-        ? { ...v, content: normalizeResumeContent(content) }
-        : v
-    ),
-  };
-}
-
-export function updateVersionSection(
-  store: VersionStore,
-  versionId: string,
+export function updateActiveSectionContent(
+  store: SectionSubVersionsStore,
   sectionId: SectionId,
   sectionContent: ResumeContent[SectionId]
-): VersionStore {
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
   return {
     ...store,
-    versions: store.versions.map((v) =>
-      v.id === versionId
-        ? {
-            ...v,
-            content: {
-              ...v.content,
-              [sectionId]: jsonClone(sectionContent),
-            },
-          }
-        : v
-    ),
+    sections: {
+      ...store.sections,
+      [sectionId]: {
+        ...bucket,
+        versions: bucket.versions.map((v) =>
+          v.id === bucket.activeVersionId
+            ? { ...v, content: jsonClone(sectionContent) }
+            : v
+        ),
+      },
+    },
   };
 }
 
-export function setSectionSource(
-  store: VersionStore,
+/** Create a new sub-version for a section from current active content (or provided content). */
+export function addSectionSubVersion(
+  store: SectionSubVersionsStore,
   sectionId: SectionId,
-  versionId: string
-): VersionStore {
+  name: string,
+  options?: {
+    content?: ResumeContent[SectionId];
+    createdBy?: SectionCreatedBy;
+    activate?: boolean;
+  }
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
+  const active =
+    bucket.versions.find((v) => v.id === bucket.activeVersionId) ??
+    bucket.versions[0];
+  const content =
+    options?.content ?? active?.content ?? emptyResumeContent()[sectionId];
+  const version = createSubVersion(
+    name.trim() || "新版本",
+    content,
+    options?.createdBy ?? "user"
+  );
+  const activate = options?.activate !== false;
+
   return {
     ...store,
-    compose: { ...store.compose, [sectionId]: versionId },
+    sections: {
+      ...store.sections,
+      [sectionId]: {
+        activeVersionId: activate ? version.id : bucket.activeVersionId,
+        versions: [...bucket.versions, version],
+      },
+    },
   };
 }
 
-export function getVersion(
-  store: VersionStore,
-  versionId: string
-): ResumeVersion | undefined {
-  return store.versions.find((v) => v.id === versionId);
+export function renameSectionSubVersion(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId,
+  versionId: string,
+  name: string
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
+  const trimmed = name.trim();
+  if (!trimmed) return store;
+  return {
+    ...store,
+    sections: {
+      ...store.sections,
+      [sectionId]: {
+        ...bucket,
+        versions: bucket.versions.map((v) =>
+          v.id === versionId ? { ...v, name: trimmed } : v
+        ),
+      },
+    },
+  };
+}
+
+export function duplicateSectionSubVersion(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId,
+  versionId: string,
+  name?: string
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
+  const source = bucket.versions.find((v) => v.id === versionId);
+  if (!source) return store;
+  const copy = createSubVersion(
+    name ?? `${source.name} 副本`,
+    source.content,
+    "user"
+  );
+  return {
+    ...store,
+    sections: {
+      ...store.sections,
+      [sectionId]: {
+        activeVersionId: copy.id,
+        versions: [...bucket.versions, copy],
+      },
+    },
+  };
 }
 
 export function formatVersionDate(iso: string): string {
@@ -240,4 +452,12 @@ export function formatVersionDate(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+/** Total sub-version count across all sections (for summary UI). */
+export function countAllSubVersions(store: SectionSubVersionsStore): number {
+  return SECTION_IDS.reduce(
+    (sum, id) => sum + store.sections[id].versions.length,
+    0
+  );
 }

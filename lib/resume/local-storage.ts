@@ -1,6 +1,7 @@
 import type { Resume } from "@/types/resume";
 import type { ResumeContent } from "@/lib/resume/content";
 import { DEMO_USER_ID } from "@/lib/resume/schema";
+import { removeSectionSubVersionsStore } from "@/lib/resume/versions";
 
 export const RESUME_INDEX_KEY = "resume-index";
 export const RESUME_INDEX_CHANGED = "resume-index-changed";
@@ -106,6 +107,7 @@ export function removeLocalResume(id: string): void {
   const entries = readLocalResumeIndex().filter((e) => e.id !== id);
   writeIndex(entries);
   localStorage.removeItem(resumeContentKey(id));
+  removeSectionSubVersionsStore(id);
 }
 
 export function localEntryToResume(entry: LocalResumeEntry): Resume {
