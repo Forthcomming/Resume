@@ -33,6 +33,17 @@ const config: Config = {
           hover: "#4338CA",
           soft: "#EEF0FE",
         },
+        // landing page tokens (scoped; do not affect app UI)
+        landing: {
+          bg: "#F4F7FA",
+          ink: "#1E293B",
+          muted: "#64748B",
+          cta: "#0F1924",
+          "accent-blue": "#60A5FA",
+          "accent-teal": "#2DD4BF",
+          "accent-purple": "#A78BFA",
+          "accent-amber": "#FBBF24",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
@@ -43,12 +54,17 @@ const config: Config = {
         card: "12px",
         panel: "16px",
         metric: "14px",
+        landing: "24px",
       },
       boxShadow: {
         card: "0 4px 24px rgba(15,25,36,0.08), 0 1px 4px rgba(15,25,36,0.04)",
         "card-hover":
           "0 8px 40px rgba(15,25,36,0.12), 0 2px 8px rgba(15,25,36,0.06)",
         data: "0 12px 48px rgba(15,25,36,0.15), 0 4px 12px rgba(15,25,36,0.08)",
+        landing:
+          "0 4px 24px rgba(30,41,59,0.06), 0 1px 4px rgba(30,41,59,0.04)",
+        "landing-lg":
+          "0 12px 40px rgba(30,41,59,0.1), 0 4px 12px rgba(30,41,59,0.06)",
       },
       maxWidth: {
         content: "1100px",

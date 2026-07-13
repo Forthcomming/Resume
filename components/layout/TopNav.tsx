@@ -20,7 +20,7 @@ export function TopNav() {
       <div className="relative mx-auto flex h-full max-w-content items-center px-6">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-brand text-white shadow-sm">
+          <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-landing-cta text-white shadow-sm">
             <FileText size={14} strokeWidth={2.5} />
           </span>
           <span className="text-[15px] font-semibold tracking-tight text-ink">

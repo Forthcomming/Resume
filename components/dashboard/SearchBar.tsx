@@ -13,7 +13,7 @@ export function SearchBar() {
       <input
         type="text"
         placeholder="搜索简历..."
-        className="h-10 w-full rounded-[10px] border border-white/70 bg-white pl-9 pr-3 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-brand/30"
+        className="h-10 w-full rounded-[10px] border border-white/70 bg-white pl-9 pr-3 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/20"
       />
     </div>
   );

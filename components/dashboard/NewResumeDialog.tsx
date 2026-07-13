@@ -46,7 +46,7 @@ function OptionCard({ icon: Icon, title, description, onClick }: OptionCardProps
       onClick={onClick}
       className="group flex flex-col rounded-card border border-white/70 bg-white p-5 text-left shadow-card transition-shadow hover:shadow-card-hover"
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand-soft text-brand">
+      <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-landing-cta/10 text-landing-cta">
         <Icon size={18} strokeWidth={2} />
       </span>
       <h3 className="mt-3.5 text-[14px] font-medium text-ink">{title}</h3>
@@ -260,8 +260,8 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
               className={clsx(
                 "mt-5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border-2 border-dashed px-6 py-10 text-center transition-colors",
                 dragActive
-                  ? "border-brand bg-brand-soft/50"
-                  : "border-ink-soft/25 hover:border-brand/40 hover:bg-white/40"
+                  ? "border-landing-cta bg-landing-cta/5"
+                  : "border-ink-soft/25 hover:border-landing-cta/40 hover:bg-white/40"
               )}
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-ink/5 text-ink-soft">
@@ -279,7 +279,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
                   e.stopPropagation();
                   inputRef.current?.click();
                 }}
-                className="mt-1 rounded-full bg-brand px-5 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-brand-hover"
+                className="mt-1 rounded-full bg-landing-cta px-5 py-2 text-[13px] font-medium text-white shadow-sm transition-opacity hover:opacity-90"
               >
                 选择文件
               </button>
@@ -328,14 +328,14 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
                   if (e.key === "Enter") startScratch();
                 }}
                 placeholder="例如：字节跳动·产品经理"
-                className="mt-3 h-11 w-full rounded-[10px] border border-white/70 bg-white px-3.5 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-brand/30"
+                className="mt-3 h-11 w-full rounded-[10px] border border-white/70 bg-white px-3.5 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/20"
               />
 
               <button
                 type="button"
                 onClick={startScratch}
                 disabled={title.trim().length === 0}
-                className="mt-4 h-11 w-full rounded-lg bg-brand text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-brand/40 disabled:shadow-none disabled:hover:bg-brand/40"
+                className="mt-4 h-11 w-full rounded-lg bg-landing-cta text-[14px] font-medium text-white shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-landing-cta/40 disabled:shadow-none disabled:hover:opacity-100"
               >
                 开始编辑
               </button>
@@ -345,7 +345,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
 
         {step === "uploading" && (
           <div className="flex flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-brand-soft text-brand">
+            <span className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-landing-cta/10 text-landing-cta">
               <Loader2 size={26} strokeWidth={2} className="animate-spin" />
             </span>
             <p className="text-[15px] font-semibold text-ink">上传中...</p>
@@ -383,7 +383,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
                   setErrorMsg("");
                   setStep("upload");
                 }}
-                className="rounded-full bg-brand px-5 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-brand-hover"
+                className="rounded-full bg-landing-cta px-5 py-2 text-[13px] font-medium text-white shadow-sm transition-opacity hover:opacity-90"
               >
                 重新上传
               </button>

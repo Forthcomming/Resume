@@ -16,8 +16,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "ResumeKit",
-  description: "模块化简历优化工具 — 把简历从一个文件变成模块库 + 动态组装引擎",
+  title: "ResumeKit — 一份简历，无限定制变体",
+  description:
+    "针对不同岗位 JD，一键生成定制版简历变体。结构化板块库 + AI 语义匹配，让每一次投递都更精准。",
 };
 
 export default function RootLayout({
