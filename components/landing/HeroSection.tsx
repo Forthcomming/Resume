@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { Play } from "lucide-react";
 import { SOCIAL_PROOF_AVATARS } from "./constants";
 import { HeroMockup } from "./HeroMockup";
+import { EnterSystemButton } from "@/components/settings/EnterSystemButton";
 
 export function HeroSection() {
   return (
@@ -17,12 +17,9 @@ export function HeroSection() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="inline-flex h-11 items-center rounded-lg bg-landing-cta px-6 text-[15px] font-medium text-white transition-opacity hover:opacity-90"
-            >
+            <EnterSystemButton className="inline-flex h-11 items-center rounded-lg bg-landing-cta px-6 text-[15px] font-medium text-white transition-opacity hover:opacity-90">
               立即体验
-            </Link>
+            </EnterSystemButton>
             <a
               href="#features"
               className="inline-flex items-center gap-2 text-[14px] font-medium text-landing-accent-blue transition-opacity hover:opacity-80"
@@ -46,7 +43,7 @@ export function HeroSection() {
             <p className="text-[13px] text-landing-muted">
               已获得{" "}
               <span className="font-semibold text-landing-ink">2000+</span>{" "}
-              位求职者的青睐
+              位求职者的青睐（我猜的）
             </p>
           </div>
         </div>

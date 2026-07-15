@@ -2,13 +2,9 @@
 
 import clsx from "clsx";
 import type { EditTarget } from "@/types/ai-edit";
+import { formatAIEditDisplayValue } from "@/lib/ai/display-value";
 
-function formatValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  return JSON.stringify(value, null, 2);
-}
-
-/** Simple line-level diff for text or JSON display. */
+/** Simple line-level diff for text display. */
 function diffLines(original: string, suggested: string): {
   type: "same" | "removed" | "added";
   text: string;
@@ -38,6 +34,7 @@ interface AIDiffViewProps {
   onAccept: () => void;
   onReject: () => void;
   loading?: boolean;
+  variant?: "inline" | "modal";
 }
 
 export function AIDiffView({
@@ -47,31 +44,42 @@ export function AIDiffView({
   onAccept,
   onReject,
   loading,
+  variant = "inline",
 }: AIDiffViewProps) {
-  const origText = formatValue(extractDisplayValue(target, original));
-  const suggText = formatValue(extractDisplayValue(target, suggested));
+  const origText = formatAIEditDisplayValue(target, original);
+  const suggText = formatAIEditDisplayValue(target, suggested);
   const lines = diffLines(origText, suggText);
+  const isModal = variant === "modal";
+  const unchanged = origText.trim() === suggText.trim();
 
   return (
-    <div className="rounded-lg border border-accent-ai/25 bg-accent-ai/5 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[12px] font-medium text-accent-ai">AI 改写建议</span>
-        <div className="flex items-center gap-2">
+    <div
+      className={
+        isModal
+          ? "p-0"
+          : "rounded-2xl border border-accent-ai/25 bg-accent-ai/[0.06] p-4"
+      }
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span className="text-[12px] font-medium text-accent-ai">AI 参考建议</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={onReject}
             disabled={loading}
-            className="rounded-md px-2.5 py-1 text-[12px] text-ink-soft transition-colors hover:bg-white hover:text-ink disabled:opacity-50"
+            className="rounded-full border border-ink-soft/15 bg-white px-3 py-1.5 text-[12px] text-ink-soft transition-colors hover:border-ink-soft/25 hover:text-ink disabled:opacity-50"
           >
-            放弃
+            不采纳，保留原文
           </button>
           <button
             type="button"
             onClick={onAccept}
-            disabled={loading}
-            className="rounded-md bg-brand px-2.5 py-1 text-[12px] font-medium text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
+            disabled={loading || unchanged}
+            className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[#1A2D40] disabled:opacity-50"
           >
-            采纳
+            采纳建议
           </button>
         </div>
       </div>
@@ -81,22 +89,30 @@ export function AIDiffView({
           <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-ink-muted">
             原文
           </p>
-          <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-ink-soft/10 bg-white p-2 text-[12px] leading-relaxed text-ink">
-            {origText}
+          <pre
+            className={`overflow-auto whitespace-pre-wrap rounded-xl border border-ink-soft/10 bg-fog-soft/30 p-3 text-[12px] leading-relaxed text-ink ${
+              isModal ? "max-h-52" : "max-h-40"
+            }`}
+          >
+            {origText || "（暂无内容）"}
           </pre>
         </div>
         <div>
           <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-ink-muted">
-            建议
+            AI 建议
           </p>
-          <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-brand/20 bg-brand-soft/30 p-2 text-[12px] leading-relaxed text-ink">
-            {suggText}
+          <pre
+            className={`overflow-auto whitespace-pre-wrap rounded-xl border border-accent-green/25 bg-accent-green/10 p-3 text-[12px] leading-relaxed text-ink ${
+              isModal ? "max-h-52" : "max-h-40"
+            }`}
+          >
+            {suggText || "（无建议）"}
           </pre>
         </div>
       </div>
 
       {lines.some((l) => l.type !== "same") && (
-        <div className="mt-2 rounded-md border border-ink-soft/10 bg-white p-2">
+        <div className="mt-3 rounded-xl border border-ink-soft/10 bg-white p-3">
           <p className="mb-1 text-[10px] font-medium text-ink-muted">变更摘要</p>
           <div className="space-y-0.5 font-mono text-[11px]">
             {lines.map((line, i) => (
@@ -115,23 +131,12 @@ export function AIDiffView({
           </div>
         </div>
       )}
+
+      {unchanged && (
+        <p className="mt-3 text-[11px] text-ink-muted">
+          AI 建议与原文相同，无需采纳。
+        </p>
+      )}
     </div>
   );
-}
-
-function extractDisplayValue(target: EditTarget, value: unknown): unknown {
-  if (target.scope === "bullet" && value && typeof value === "object") {
-    const entries = (value as { entries?: unknown[] }).entries;
-    const entry = entries?.[target.entryIndex] as
-      | { bullets?: string[]; notes?: string[] }
-      | undefined;
-    if (entry) {
-      const list = entry.bullets ?? entry.notes ?? [];
-      return list[target.bulletIndex] ?? "";
-    }
-  }
-  if (target.scope === "field" && value && typeof value === "object") {
-    return (value as Record<string, string>)[target.field] ?? "";
-  }
-  return value;
 }

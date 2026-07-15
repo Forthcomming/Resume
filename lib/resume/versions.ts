@@ -1,8 +1,14 @@
 import {
   emptyResumeContent,
   normalizeResumeContent,
+  normalizeSectionContent,
   type ResumeContent,
 } from "@/lib/resume/content";
+import {
+  DEFAULT_DATE_DISPLAY_FORMAT,
+  isDateDisplayFormat,
+  type DateDisplayFormat,
+} from "@/lib/resume/date-display";
 
 export type SectionId = keyof ResumeContent;
 
@@ -24,6 +30,12 @@ export interface SectionBucket<T = unknown> {
 
 export interface SectionSubVersionsStore {
   schemaVersion: 1;
+  /** Display order of sections in editor + preview body (basic_info always first). */
+  sectionOrder: SectionId[];
+  /** Custom display labels per section (editor + PDF preview). */
+  sectionTitles: Partial<Record<SectionId, string>>;
+  /** Shared date format for preview (education / work / project). */
+  dateDisplayFormat?: DateDisplayFormat;
   sections: {
     [K in SectionId]: SectionBucket<ResumeContent[K]>;
   };
@@ -50,6 +62,68 @@ export const SECTION_IDS: SectionId[] = [
   "project",
   "skills",
 ];
+
+export const DEFAULT_SECTION_LABELS: Record<SectionId, string> = {
+  basic_info: "基本信息",
+  summary: "个人简介",
+  work: "工作经历",
+  education: "教育经历",
+  project: "项目经历",
+  skills: "技能",
+};
+
+function sanitizeSectionTitles(
+  raw: Partial<Record<SectionId, string>> | undefined
+): Partial<Record<SectionId, string>> {
+  const result: Partial<Record<SectionId, string>> = {};
+  if (!raw || typeof raw !== "object") return result;
+  for (const id of SECTION_IDS) {
+    const label = raw[id]?.trim();
+    if (label && label !== DEFAULT_SECTION_LABELS[id]) {
+      result[id] = label;
+    }
+  }
+  return result;
+}
+
+export function getDateDisplayFormat(
+  store: SectionSubVersionsStore
+): DateDisplayFormat {
+  return isDateDisplayFormat(store.dateDisplayFormat)
+    ? store.dateDisplayFormat
+    : DEFAULT_DATE_DISPLAY_FORMAT;
+}
+
+export function setDateDisplayFormat(
+  store: SectionSubVersionsStore,
+  format: DateDisplayFormat
+): SectionSubVersionsStore {
+  return { ...store, dateDisplayFormat: format };
+}
+
+export function getSectionDisplayTitle(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId
+): string {
+  return (
+    store.sectionTitles[sectionId]?.trim() || DEFAULT_SECTION_LABELS[sectionId]
+  );
+}
+
+export function setSectionDisplayTitle(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId,
+  title: string
+): SectionSubVersionsStore {
+  const trimmed = title.trim();
+  const next = { ...store.sectionTitles };
+  if (!trimmed || trimmed === DEFAULT_SECTION_LABELS[sectionId]) {
+    delete next[sectionId];
+  } else {
+    next[sectionId] = trimmed;
+  }
+  return { ...store, sectionTitles: next };
+}
 
 export function sectionSubVersionsKey(resumeId: string): string {
   return `resume-section-subversions:${resumeId}`;
@@ -105,6 +179,76 @@ function emptyBucket<K extends SectionId>(
   };
 }
 
+export type BodySectionId = Exclude<SectionId, "basic_info">;
+
+/** Body sections that can be reordered (basic_info stays as resume header). */
+export const REORDERABLE_SECTION_IDS: BodySectionId[] = [
+  "summary",
+  "work",
+  "education",
+  "project",
+  "skills",
+];
+
+export function defaultSectionOrder(): SectionId[] {
+  return [...SECTION_IDS];
+}
+
+/** Ensure basic_info is first and every section id appears exactly once. */
+export function sanitizeSectionOrder(order?: SectionId[]): SectionId[] {
+  const seen = new Set<BodySectionId>();
+  const body: BodySectionId[] = [];
+
+  for (const id of order ?? []) {
+    if (id === "basic_info") continue;
+    if (
+      (REORDERABLE_SECTION_IDS as readonly string[]).includes(id) &&
+      !seen.has(id as BodySectionId)
+    ) {
+      seen.add(id as BodySectionId);
+      body.push(id as BodySectionId);
+    }
+  }
+
+  for (const id of REORDERABLE_SECTION_IDS) {
+    if (!seen.has(id)) body.push(id);
+  }
+
+  return ["basic_info", ...body];
+}
+
+export function getSectionOrder(store: SectionSubVersionsStore): SectionId[] {
+  return sanitizeSectionOrder(store.sectionOrder);
+}
+
+/** Reorder sections by index within the full sectionOrder array. */
+export function reorderSections(
+  store: SectionSubVersionsStore,
+  fromIndex: number,
+  toIndex: number
+): SectionSubVersionsStore {
+  const order = getSectionOrder(store);
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= order.length ||
+    toIndex >= order.length
+  ) {
+    return store;
+  }
+
+  // Keep basic_info pinned at the top.
+  if (order[fromIndex] === "basic_info" || order[toIndex] === "basic_info") {
+    return store;
+  }
+
+  const next = [...order];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return { ...store, sectionOrder: sanitizeSectionOrder(next) };
+}
+
 /** Build store from a flat resume content blob (one default sub-version per section). */
 export function initSectionSubVersionsStore(
   content: ResumeContent
@@ -112,6 +256,9 @@ export function initSectionSubVersionsStore(
   const normalized = normalizeResumeContent(content);
   return {
     schemaVersion: 1,
+    sectionOrder: defaultSectionOrder(),
+    sectionTitles: {},
+    dateDisplayFormat: DEFAULT_DATE_DISPLAY_FORMAT,
     sections: {
       basic_info: emptyBucket("basic_info", normalized.basic_info),
       summary: emptyBucket("summary", normalized.summary),
@@ -171,6 +318,9 @@ export function migrateLegacyVersionStore(
 ): SectionSubVersionsStore {
   return {
     schemaVersion: 1,
+    sectionOrder: defaultSectionOrder(),
+    sectionTitles: {},
+    dateDisplayFormat: DEFAULT_DATE_DISPLAY_FORMAT,
     sections: {
       basic_info: migrateSectionBucket("basic_info", legacy),
       summary: migrateSectionBucket("summary", legacy),
@@ -190,8 +340,9 @@ function sanitizeSectionBucket<K extends SectionId>(
     ...v,
     name: v.name?.trim() || "默认",
     createdBy: (v.createdBy === "ai" ? "ai" : "user") as SectionCreatedBy,
-    content: jsonClone(
-      v.content ?? emptyResumeContent()[sectionId]
+    content: normalizeSectionContent(
+      sectionId,
+      jsonClone(v.content ?? emptyResumeContent()[sectionId])
     ),
   }));
 
@@ -212,6 +363,9 @@ export function sanitizeSectionSubVersionsStore(
 ): SectionSubVersionsStore {
   return {
     schemaVersion: 1,
+    sectionOrder: sanitizeSectionOrder(store.sectionOrder),
+    sectionTitles: sanitizeSectionTitles(store.sectionTitles),
+    dateDisplayFormat: getDateDisplayFormat(store),
     sections: {
       basic_info: sanitizeSectionBucket("basic_info", store.sections?.basic_info),
       summary: sanitizeSectionBucket("summary", store.sections?.summary),
@@ -282,14 +436,14 @@ export function composeFromSectionSubVersions(
     return emptyResumeContent()[id];
   };
 
-  return {
+  return normalizeResumeContent({
     basic_info: pick("basic_info"),
     summary: pick("summary"),
     work: pick("work"),
     education: pick("education"),
     project: pick("project"),
     skills: pick("skills"),
-  };
+  });
 }
 
 export function getActiveSectionContent<K extends SectionId>(
@@ -301,7 +455,7 @@ export function getActiveSectionContent<K extends SectionId>(
     bucket.versions.find((v) => v.id === bucket.activeVersionId) ??
     bucket.versions[0];
   return active
-    ? jsonClone(active.content)
+    ? normalizeSectionContent(sectionId, jsonClone(active.content))
     : emptyResumeContent()[sectionId];
 }
 
@@ -437,6 +591,35 @@ export function duplicateSectionSubVersion(
       [sectionId]: {
         activeVersionId: copy.id,
         versions: [...bucket.versions, copy],
+      },
+    },
+  };
+}
+
+/** Remove a sub-version. At least one version must remain per section. */
+export function deleteSectionSubVersion(
+  store: SectionSubVersionsStore,
+  sectionId: SectionId,
+  versionId: string
+): SectionSubVersionsStore {
+  const bucket = store.sections[sectionId];
+  if (bucket.versions.length <= 1) return store;
+
+  const nextVersions = bucket.versions.filter((v) => v.id !== versionId);
+  if (nextVersions.length === bucket.versions.length) return store;
+
+  const nextActiveId =
+    bucket.activeVersionId === versionId
+      ? nextVersions[0].id
+      : bucket.activeVersionId;
+
+  return {
+    ...store,
+    sections: {
+      ...store.sections,
+      [sectionId]: {
+        activeVersionId: nextActiveId,
+        versions: nextVersions,
       },
     },
   };

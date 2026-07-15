@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { EnterSystemButton } from "@/components/settings/EnterSystemButton";
 
 export function FinalCTASection() {
   return (
@@ -8,13 +8,10 @@ export function FinalCTASection() {
         <h2 className="mx-auto max-w-xl text-[24px] font-bold leading-snug tracking-tight text-landing-ink md:text-[32px]">
           不再重复修改同一份简历，开始精准定制每个岗位。
         </h2>
-        <Link
-          href="/dashboard"
-          className="mt-8 inline-flex h-12 items-center gap-2 rounded-lg bg-landing-cta px-7 text-[15px] font-medium text-white transition-opacity hover:opacity-90"
-        >
+        <EnterSystemButton className="mt-8 inline-flex h-12 items-center gap-2 rounded-lg bg-landing-cta px-7 text-[15px] font-medium text-white transition-opacity hover:opacity-90">
           开始使用
           <ArrowRight size={16} strokeWidth={2.2} />
-        </Link>
+        </EnterSystemButton>
         <p className="mt-4 text-[13px] text-landing-muted">
           注册即送 5 次免费 AI 优化次数
         </p>

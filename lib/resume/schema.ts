@@ -26,5 +26,8 @@ export function rowToResume(row: ResumeRow): Resume {
   };
 }
 
-/** Fixed demo user used while auth is not yet implemented. */
+/**
+ * User id on seed / mockup rows only (schema.sql + seed.ts).
+ * Do not use for live writes — use getCurrentUserId() + canPersistToCloud().
+ */
 export const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";

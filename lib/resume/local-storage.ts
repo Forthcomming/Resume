@@ -1,6 +1,6 @@
 import type { Resume } from "@/types/resume";
 import type { ResumeContent } from "@/lib/resume/content";
-import { DEMO_USER_ID } from "@/lib/resume/schema";
+import { LOCAL_GUEST_USER_ID } from "@/lib/auth/constants";
 import { removeSectionSubVersionsStore } from "@/lib/resume/versions";
 
 export const RESUME_INDEX_KEY = "resume-index";
@@ -113,7 +113,7 @@ export function removeLocalResume(id: string): void {
 export function localEntryToResume(entry: LocalResumeEntry): Resume {
   return {
     id: entry.id,
-    userId: DEMO_USER_ID,
+    userId: LOCAL_GUEST_USER_ID,
     title: entry.title,
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,

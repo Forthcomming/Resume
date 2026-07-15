@@ -1,5 +1,6 @@
 import type { EditTarget } from "@/types/ai-edit";
 import type { ResumeContent } from "@/lib/resume/content";
+import { deepseekAuthHeaders } from "@/lib/ai/user-api-key";
 
 function jsonClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -64,7 +65,10 @@ export async function requestAIEdit(
 ): Promise<{ original: unknown; suggested: unknown }> {
   const res = await fetch("/api/resume/edit", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...deepseekAuthHeaders(),
+    },
     body: JSON.stringify({ target, content, instruction }),
   });
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { NAV_LINKS } from "./constants";
+import { EnterSystemButton } from "@/components/settings/EnterSystemButton";
 
 export function LandingNav() {
   return (
@@ -28,12 +29,9 @@ export function LandingNav() {
         </nav>
 
         <div className="ml-auto">
-          <Link
-            href="/dashboard"
-            className="inline-flex h-9 items-center rounded-lg bg-landing-cta px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-          >
+          <EnterSystemButton className="inline-flex h-9 items-center rounded-lg bg-landing-cta px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
             免费加入
-          </Link>
+          </EnterSystemButton>
         </div>
       </div>
     </header>

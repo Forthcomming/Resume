@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getResume } from "@/services/resumes";
 import { getResumeContent } from "@/services/resume-content";
 import { ResumeEditor } from "@/components/resume/editor/ResumeEditor";
+import { EnsureAnonymousSession } from "@/components/auth/EnsureAnonymousSession";
 
 export default async function ResumeEditorPage({
   params,
@@ -12,8 +13,7 @@ export default async function ResumeEditorPage({
 }) {
   const resume = await getResume(params.id);
 
-  // A freshly created/imported resume in localStorage-only mode (no Supabase)
-  // won't be found server-side; fall back to the title passed via query string.
+  // Fresh local-only resumes may not exist server-side yet.
   const fallbackTitle = searchParams.title?.trim();
   if (!resume && !fallbackTitle) {
     notFound();
@@ -22,10 +22,13 @@ export default async function ResumeEditorPage({
   const initialContent = await getResumeContent(params.id);
 
   return (
-    <ResumeEditor
-      id={params.id}
-      title={resume?.title ?? fallbackTitle ?? "未命名简历"}
-      initialContent={initialContent}
-    />
+    <>
+      <EnsureAnonymousSession />
+      <ResumeEditor
+        id={params.id}
+        title={resume?.title ?? fallbackTitle ?? "未命名简历"}
+        initialContent={initialContent}
+      />
+    </>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+import { CloudUpload, User } from "lucide-react";
 import {
   TextField,
   TextAreaField,
@@ -8,7 +10,13 @@ import {
   BulletList,
   TagInput,
 } from "./fields";
-import type { PendingAIEdit } from "@/types/ai-edit";
+import { DateRangeField, SelectField } from "./DateRangeField";
+import {
+  DEGREE_OPTIONS,
+  SCHOOL_TAG_OPTIONS,
+  STUDY_TYPE_OPTIONS,
+} from "@/lib/resume/education-options";
+import type { DateDisplayFormat } from "@/lib/resume/date-display";
 import {
   emptyEducationEntry,
   emptyWorkEntry,
@@ -23,6 +31,76 @@ import {
   type ResumeContent,
 } from "@/lib/resume/content";
 
+function BasicInfoGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-ink-soft/10 bg-fog-soft/25 p-4">
+      <h3 className="mb-3 text-[13px] font-semibold text-ink">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function AvatarField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") onChange(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <span className="mb-1.5 block w-full text-[12px] font-medium text-ink-soft">
+        头像
+      </span>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="mb-2 flex items-center gap-1.5 rounded-full border border-ink-soft/10 bg-white px-3 py-1.5 text-[11px] font-medium text-ink-soft transition-colors hover:border-ink-soft/20 hover:text-ink"
+      >
+        <CloudUpload size={13} strokeWidth={2} />
+        上传头像
+      </button>
+      <div className="flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-2xl border border-ink-soft/10 bg-white">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt="头像" className="h-full w-full object-cover" />
+        ) : (
+          <User size={32} strokeWidth={1.5} className="text-ink-muted/40" />
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          handleFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 function BasicInfoForm({
   value,
   onChange,
@@ -32,17 +110,132 @@ function BasicInfoForm({
 }) {
   const set = (k: keyof BasicInfoContent, v: string) =>
     onChange({ ...value, [k]: v });
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <TextField label="姓名" value={value.name} onChange={(v) => set("name", v)} placeholder="张三" />
-      <TextField label="所在地" value={value.location} onChange={(v) => set("location", v)} placeholder="北京" />
-      <TextField label="邮箱" type="email" value={value.email} onChange={(v) => set("email", v)} placeholder="you@example.com" />
-      <TextField label="电话" value={value.phone} onChange={(v) => set("phone", v)} placeholder="138-0000-0000" />
-      <TextField label="LinkedIn" value={value.linkedin} onChange={(v) => set("linkedin", v)} placeholder="linkedin.com/in/..." />
-      <TextField label="GitHub" value={value.github} onChange={(v) => set("github", v)} placeholder="github.com/..." />
-      <div className="col-span-2">
-        <TextField label="个人网站" value={value.website} onChange={(v) => set("website", v)} placeholder="https://..." />
+    <div className="space-y-4">
+      <div className="flex gap-4">
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
+          <TextField
+            label="姓名"
+            value={value.name}
+            onChange={(v) => set("name", v)}
+            placeholder="小biu"
+          />
+          <TextField
+            label="电话"
+            value={value.phone}
+            onChange={(v) => set("phone", v)}
+            placeholder="13800000000"
+          />
+          <TextField
+            label="邮箱"
+            type="email"
+            value={value.email}
+            onChange={(v) => set("email", v)}
+            placeholder="example@offerbiu.com"
+          />
+          <TextField
+            label="年龄"
+            value={value.birthday}
+            onChange={(v) => set("birthday", v)}
+            placeholder="如：26"
+          />
+        </div>
+        <AvatarField value={value.avatar} onChange={(v) => set("avatar", v)} />
       </div>
+
+      <BasicInfoGroup title="求职意向">
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="意向城市"
+            value={value.target_cities}
+            onChange={(v) => set("target_cities", v)}
+            placeholder="北京 / 上海 / 深圳"
+          />
+          <TextField
+            label="期望职位"
+            value={value.desired_position}
+            onChange={(v) => set("desired_position", v)}
+            placeholder="产品经理 / 数据分析"
+          />
+        </div>
+      </BasicInfoGroup>
+
+      <BasicInfoGroup title="社交信息">
+        <div className="grid grid-cols-3 gap-3">
+          <TextField
+            label="个人网站"
+            value={value.website}
+            onChange={(v) => set("website", v)}
+            placeholder="作品集 / GitHub"
+          />
+          <TextField
+            label="微信"
+            value={value.wechat}
+            onChange={(v) => set("wechat", v)}
+            placeholder="微信号"
+          />
+          <TextField
+            label="LinkedIn"
+            value={value.linkedin}
+            onChange={(v) => set("linkedin", v)}
+            placeholder="LinkedIn 链接"
+          />
+        </div>
+      </BasicInfoGroup>
+
+      <BasicInfoGroup title="其他信息">
+        <div className="grid grid-cols-4 gap-3">
+          <TextField
+            label="性别"
+            value={value.gender}
+            onChange={(v) => set("gender", v)}
+            placeholder="男"
+          />
+          <TextField
+            label="身高"
+            value={value.height}
+            onChange={(v) => set("height", v)}
+            placeholder="如：175cm"
+          />
+          <TextField
+            label="体重"
+            value={value.weight}
+            onChange={(v) => set("weight", v)}
+            placeholder="如：65kg"
+          />
+          <TextField
+            label="民族"
+            value={value.ethnicity}
+            onChange={(v) => set("ethnicity", v)}
+            placeholder="汉族"
+          />
+          <TextField
+            label="籍贯"
+            value={value.native_place}
+            onChange={(v) => set("native_place", v)}
+            placeholder="如：广东深圳"
+          />
+          <TextField
+            label="政治面貌"
+            value={value.political_status}
+            onChange={(v) => set("political_status", v)}
+            placeholder="如：中共党员"
+          />
+          <TextField
+            label="婚姻状况"
+            value={value.marital_status}
+            onChange={(v) => set("marital_status", v)}
+            placeholder="如：未婚"
+          />
+          <TextField
+            label="现居城市"
+            value={value.location}
+            onChange={(v) => set("location", v)}
+            placeholder="北京"
+          />
+        </div>
+      </BasicInfoGroup>
     </div>
   );
 }
@@ -67,25 +260,17 @@ function SummaryForm({
 function EducationForm({
   value,
   onChange,
-  onBulletAIRequest,
+  dateDisplayFormat,
+  onDateDisplayFormatChange,
   bulletAIOpen,
   onToggleBulletAI,
-  pendingAIEdit,
-  onAIAccept,
-  onAIReject,
 }: {
   value: EducationContent;
   onChange: (v: EducationContent) => void;
-  onBulletAIRequest?: (
-    entryIndex: number,
-    bulletIndex: number,
-    instruction: string
-  ) => void;
+  dateDisplayFormat?: DateDisplayFormat;
+  onDateDisplayFormatChange?: (format: DateDisplayFormat) => void;
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
-  pendingAIEdit?: PendingAIEdit | null;
-  onAIAccept?: () => void;
-  onAIReject?: () => void;
 }) {
   const update = (i: number, patch: Partial<EducationContent["entries"][number]>) =>
     onChange({
@@ -102,12 +287,65 @@ function EducationForm({
           }
         >
           <div className="grid grid-cols-2 gap-3">
-            <TextField label="学校" value={e.school} onChange={(v) => update(i, { school: v })} placeholder="清华大学" />
-            <TextField label="专业" value={e.major} onChange={(v) => update(i, { major: v })} placeholder="计算机科学" />
-            <TextField label="学位" value={e.degree} onChange={(v) => update(i, { degree: v })} placeholder="本科 / 硕士" />
-            <TextField label="GPA" value={e.gpa} onChange={(v) => update(i, { gpa: v })} placeholder="3.8 / 4.0" />
-            <TextField label="开始" value={e.startDate} onChange={(v) => update(i, { startDate: v })} placeholder="2018-09" />
-            <TextField label="结束" value={e.endDate} onChange={(v) => update(i, { endDate: v })} placeholder="2022-06 / present" />
+            <TextField
+              label="学校名称"
+              value={e.school}
+              onChange={(v) => update(i, { school: v })}
+              placeholder="示例大学"
+            />
+            <SelectField
+              label="学校标签"
+              value={e.schoolTag}
+              onChange={(v) => update(i, { schoolTag: v })}
+              options={SCHOOL_TAG_OPTIONS}
+            />
+            <TextField
+              label="专业"
+              value={e.major}
+              onChange={(v) => update(i, { major: v })}
+              placeholder="信息管理与信息系统"
+            />
+            <TextField
+              label="学院"
+              value={e.college}
+              onChange={(v) => update(i, { college: v })}
+              placeholder="管理学院"
+            />
+            <SelectField
+              label="学历"
+              value={e.degree}
+              onChange={(v) => update(i, { degree: v })}
+              options={DEGREE_OPTIONS}
+            />
+            <SelectField
+              label="类型"
+              value={e.studyType}
+              onChange={(v) => update(i, { studyType: v })}
+              options={STUDY_TYPE_OPTIONS}
+            />
+            <TextField
+              label="所在城市"
+              value={e.city}
+              onChange={(v) => update(i, { city: v })}
+              placeholder="请输入所在城市"
+            />
+            <TextField
+              label="GPA"
+              value={e.gpa}
+              onChange={(v) => update(i, { gpa: v })}
+              placeholder="3.8 / 4.0"
+            />
+            <div className="col-span-2">
+              <DateRangeField
+                startDate={e.startDate}
+                endDate={e.endDate}
+                onChange={(startDate, endDate) =>
+                  update(i, { startDate, endDate })
+                }
+                dateDisplayFormat={dateDisplayFormat}
+                onDateDisplayFormatChange={onDateDisplayFormatChange}
+              />
+            </div>
           </div>
           <div className="mt-3">
             <BulletList
@@ -116,12 +354,8 @@ function EducationForm({
               onChange={(notes) => update(i, { notes })}
               entryIndex={i}
               sectionId="education"
-              onBulletAIRequest={onBulletAIRequest}
               bulletAIOpen={bulletAIOpen}
               onToggleBulletAI={onToggleBulletAI}
-              pendingAIEdit={pendingAIEdit}
-              onAIAccept={onAIAccept}
-              onAIReject={onAIReject}
             />
           </div>
         </EntryCard>
@@ -134,25 +368,17 @@ function EducationForm({
 function WorkExperienceForm({
   value,
   onChange,
-  onBulletAIRequest,
+  dateDisplayFormat,
+  onDateDisplayFormatChange,
   bulletAIOpen,
   onToggleBulletAI,
-  pendingAIEdit,
-  onAIAccept,
-  onAIReject,
 }: {
   value: WorkExperienceContent;
   onChange: (v: WorkExperienceContent) => void;
-  onBulletAIRequest?: (
-    entryIndex: number,
-    bulletIndex: number,
-    instruction: string
-  ) => void;
+  dateDisplayFormat?: DateDisplayFormat;
+  onDateDisplayFormatChange?: (format: DateDisplayFormat) => void;
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
-  pendingAIEdit?: PendingAIEdit | null;
-  onAIAccept?: () => void;
-  onAIReject?: () => void;
 }) {
   const update = (i: number, patch: Partial<WorkExperienceContent["entries"][number]>) =>
     onChange({
@@ -172,9 +398,16 @@ function WorkExperienceForm({
             <TextField label="公司" value={e.company} onChange={(v) => update(i, { company: v })} placeholder="字节跳动" />
             <TextField label="职位" value={e.title} onChange={(v) => update(i, { title: v })} placeholder="产品经理" />
             <TextField label="地点" value={e.location} onChange={(v) => update(i, { location: v })} placeholder="北京" />
-            <div className="grid grid-cols-2 gap-3">
-              <TextField label="开始" value={e.startDate} onChange={(v) => update(i, { startDate: v })} placeholder="2022-07" />
-              <TextField label="结束" value={e.endDate} onChange={(v) => update(i, { endDate: v })} placeholder="present" />
+            <div className="col-span-2">
+              <DateRangeField
+                startDate={e.startDate}
+                endDate={e.endDate}
+                onChange={(startDate, endDate) =>
+                  update(i, { startDate, endDate })
+                }
+                dateDisplayFormat={dateDisplayFormat}
+                onDateDisplayFormatChange={onDateDisplayFormatChange}
+              />
             </div>
           </div>
           <div className="mt-3">
@@ -184,12 +417,8 @@ function WorkExperienceForm({
               onChange={(bullets) => update(i, { bullets })}
               entryIndex={i}
               sectionId="work"
-              onBulletAIRequest={onBulletAIRequest}
               bulletAIOpen={bulletAIOpen}
               onToggleBulletAI={onToggleBulletAI}
-              pendingAIEdit={pendingAIEdit}
-              onAIAccept={onAIAccept}
-              onAIReject={onAIReject}
             />
           </div>
         </EntryCard>
@@ -202,25 +431,17 @@ function WorkExperienceForm({
 function ProjectForm({
   value,
   onChange,
-  onBulletAIRequest,
+  dateDisplayFormat,
+  onDateDisplayFormatChange,
   bulletAIOpen,
   onToggleBulletAI,
-  pendingAIEdit,
-  onAIAccept,
-  onAIReject,
 }: {
   value: ProjectContent;
   onChange: (v: ProjectContent) => void;
-  onBulletAIRequest?: (
-    entryIndex: number,
-    bulletIndex: number,
-    instruction: string
-  ) => void;
+  dateDisplayFormat?: DateDisplayFormat;
+  onDateDisplayFormatChange?: (format: DateDisplayFormat) => void;
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
-  pendingAIEdit?: PendingAIEdit | null;
-  onAIAccept?: () => void;
-  onAIReject?: () => void;
 }) {
   const update = (i: number, patch: Partial<ProjectContent["entries"][number]>) =>
     onChange({
@@ -239,8 +460,17 @@ function ProjectForm({
           <div className="grid grid-cols-2 gap-3">
             <TextField label="项目名称" value={e.name} onChange={(v) => update(i, { name: v })} placeholder="ResumeKit" />
             <TextField label="角色" value={e.role} onChange={(v) => update(i, { role: v })} placeholder="负责人 / 核心开发" />
-            <TextField label="开始" value={e.startDate} onChange={(v) => update(i, { startDate: v })} placeholder="2023-01" />
-            <TextField label="结束" value={e.endDate} onChange={(v) => update(i, { endDate: v })} placeholder="2023-06" />
+            <div className="col-span-2">
+              <DateRangeField
+                startDate={e.startDate}
+                endDate={e.endDate}
+                onChange={(startDate, endDate) =>
+                  update(i, { startDate, endDate })
+                }
+                dateDisplayFormat={dateDisplayFormat}
+                onDateDisplayFormatChange={onDateDisplayFormatChange}
+              />
+            </div>
             <div className="col-span-2">
               <TextField label="链接" value={e.link} onChange={(v) => update(i, { link: v })} placeholder="https://..." />
             </div>
@@ -255,12 +485,8 @@ function ProjectForm({
               onChange={(bullets) => update(i, { bullets })}
               entryIndex={i}
               sectionId="project"
-              onBulletAIRequest={onBulletAIRequest}
               bulletAIOpen={bulletAIOpen}
               onToggleBulletAI={onToggleBulletAI}
-              pendingAIEdit={pendingAIEdit}
-              onAIAccept={onAIAccept}
-              onAIReject={onAIReject}
             />
           </div>
         </EntryCard>
@@ -310,26 +536,18 @@ export function SectionForm({
   sectionId,
   content,
   onChange,
-  onBulletAIRequest,
+  dateDisplayFormat,
+  onDateDisplayFormatChange,
   bulletAIOpen,
   onToggleBulletAI,
-  pendingAIEdit,
-  onAIAccept,
-  onAIReject,
 }: {
   sectionId: keyof ResumeContent;
   content: ResumeContent;
   onChange: (next: ResumeContent) => void;
-  onBulletAIRequest?: (
-    entryIndex: number,
-    bulletIndex: number,
-    instruction: string
-  ) => void;
+  dateDisplayFormat?: DateDisplayFormat;
+  onDateDisplayFormatChange?: (format: DateDisplayFormat) => void;
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
-  pendingAIEdit?: PendingAIEdit | null;
-  onAIAccept?: () => void;
-  onAIReject?: () => void;
 }) {
   switch (sectionId) {
     case "basic_info":
@@ -351,12 +569,10 @@ export function SectionForm({
         <WorkExperienceForm
           value={content.work}
           onChange={(v) => onChange({ ...content, work: v })}
-          onBulletAIRequest={onBulletAIRequest}
+          dateDisplayFormat={dateDisplayFormat}
+          onDateDisplayFormatChange={onDateDisplayFormatChange}
           bulletAIOpen={bulletAIOpen}
           onToggleBulletAI={onToggleBulletAI}
-          pendingAIEdit={pendingAIEdit}
-          onAIAccept={onAIAccept}
-          onAIReject={onAIReject}
         />
       );
     case "education":
@@ -364,12 +580,10 @@ export function SectionForm({
         <EducationForm
           value={content.education}
           onChange={(v) => onChange({ ...content, education: v })}
-          onBulletAIRequest={onBulletAIRequest}
+          dateDisplayFormat={dateDisplayFormat}
+          onDateDisplayFormatChange={onDateDisplayFormatChange}
           bulletAIOpen={bulletAIOpen}
           onToggleBulletAI={onToggleBulletAI}
-          pendingAIEdit={pendingAIEdit}
-          onAIAccept={onAIAccept}
-          onAIReject={onAIReject}
         />
       );
     case "project":
@@ -377,12 +591,10 @@ export function SectionForm({
         <ProjectForm
           value={content.project}
           onChange={(v) => onChange({ ...content, project: v })}
-          onBulletAIRequest={onBulletAIRequest}
+          dateDisplayFormat={dateDisplayFormat}
+          onDateDisplayFormatChange={onDateDisplayFormatChange}
           bulletAIOpen={bulletAIOpen}
           onToggleBulletAI={onToggleBulletAI}
-          pendingAIEdit={pendingAIEdit}
-          onAIAccept={onAIAccept}
-          onAIReject={onAIReject}
         />
       );
     case "skills":

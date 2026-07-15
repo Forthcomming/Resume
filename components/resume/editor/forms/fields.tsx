@@ -2,12 +2,10 @@
 
 import { Plus, Trash2, X, Sparkles } from "lucide-react";
 import { useState } from "react";
-import type { PendingAIEdit } from "@/types/ai-edit";
-import { AIInlinePrompt } from "../AIInlinePrompt";
-import { AIDiffView } from "../AIDiffView";
+import clsx from "clsx";
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-ink-soft/15 bg-fog/40 px-3 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/20";
+  "h-10 w-full rounded-xl border border-ink-soft/10 bg-white px-3.5 text-[13px] text-ink-soft outline-none placeholder:text-ink-muted transition-colors focus:border-ink-soft/20 focus:text-ink focus:ring-2 focus:ring-ink/5";
 
 export function TextField({
   label,
@@ -24,7 +22,7 @@ export function TextField({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[12px] font-medium text-ink-soft">
+      <span className="mb-1.5 block text-[12px] font-medium text-ink-soft">
         {label}
       </span>
       <input
@@ -54,7 +52,7 @@ export function TextAreaField({
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-[12px] font-medium text-ink-soft">
+        <span className="mb-1.5 block text-[12px] font-medium text-ink-soft">
           {label}
         </span>
       )}
@@ -63,7 +61,7 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-y rounded-lg border border-ink-soft/15 bg-fog/40 px-3 py-2 text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/20"
+        className="w-full resize-y rounded-xl border border-ink-soft/10 bg-white px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-soft outline-none placeholder:text-ink-muted transition-colors focus:border-ink-soft/20 focus:text-ink focus:ring-2 focus:ring-ink/5"
       />
     </label>
   );
@@ -80,14 +78,14 @@ export function EntryCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-ink-soft/15 bg-fog/30 p-3">
-      <div className="mb-2.5 flex items-center justify-between">
+    <div className="rounded-2xl border border-ink-soft/10 bg-fog-soft/40 p-4">
+      <div className="mb-3 flex items-center justify-between">
         <span className="text-[12px] font-medium text-ink-soft">{label}</span>
         <button
           type="button"
           onClick={onRemove}
           aria-label="删除"
-          className="flex h-6 w-6 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-white hover:text-red-500"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-white hover:text-red-500"
         >
           <Trash2 size={14} strokeWidth={2} />
         </button>
@@ -108,7 +106,7 @@ export function AddButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-ink-soft/25 py-2 text-[12px] text-ink-soft transition-colors hover:border-brand/40 hover:text-brand"
+      className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-ink-soft/20 py-2.5 text-[12px] text-ink-soft transition-colors hover:border-ink-soft/40 hover:bg-white/60 hover:text-ink"
     >
       <Plus size={14} strokeWidth={2} />
       {label}
@@ -123,28 +121,16 @@ export function BulletList({
   onChange,
   entryIndex,
   sectionId,
-  onBulletAIRequest,
   bulletAIOpen,
   onToggleBulletAI,
-  pendingAIEdit,
-  onAIAccept,
-  onAIReject,
 }: {
   label?: string;
   bullets: string[];
   onChange: (next: string[]) => void;
   entryIndex?: number;
   sectionId?: "work" | "project" | "education";
-  onBulletAIRequest?: (
-    entryIndex: number,
-    bulletIndex: number,
-    instruction: string
-  ) => void;
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
-  pendingAIEdit?: PendingAIEdit | null;
-  onAIAccept?: () => void;
-  onAIReject?: () => void;
 }) {
   const update = (i: number, v: string) => {
     const next = [...bullets];
@@ -162,18 +148,7 @@ export function BulletList({
         </span>
       )}
       <div className="space-y-1.5">
-        {bullets.map((b, i) => {
-          const isBulletOpen =
-            bulletAIOpen?.entryIndex === entryIndex &&
-            bulletAIOpen?.bulletIndex === i;
-          const isBulletPending =
-            pendingAIEdit?.target.scope === "bullet" &&
-            pendingAIEdit.target.entryIndex === entryIndex &&
-            pendingAIEdit.target.bulletIndex === i &&
-            sectionId &&
-            pendingAIEdit.target.sectionId === sectionId;
-
-          return (
+        {bullets.map((b, i) => (
             <div key={i} className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-ink-muted">•</span>
@@ -188,7 +163,12 @@ export function BulletList({
                     type="button"
                     onClick={() => onToggleBulletAI(entryIndex, i)}
                     aria-label="AI 优化此条"
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-accent-ai transition-colors hover:bg-accent-ai/10"
+                    className={clsx(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent-ai transition-colors hover:bg-accent-ai/10",
+                      bulletAIOpen?.entryIndex === entryIndex &&
+                        bulletAIOpen?.bulletIndex === i &&
+                        "bg-accent-ai/15 ring-2 ring-accent-ai/20"
+                    )}
                   >
                     <Sparkles size={14} strokeWidth={2} />
                   </button>
@@ -197,59 +177,18 @@ export function BulletList({
                   type="button"
                   onClick={() => remove(i)}
                   aria-label="删除"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-fog hover:text-red-500"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-fog-soft hover:text-red-500"
                 >
                   <X size={14} strokeWidth={2} />
                 </button>
               </div>
-
-              {isBulletOpen &&
-                !isBulletPending &&
-                onBulletAIRequest &&
-                entryIndex !== undefined && (
-                  <AIInlinePrompt
-                    placeholder="优化此条描述，如：加入量化数据"
-                    onSubmit={(instruction) =>
-                      onBulletAIRequest(entryIndex, i, instruction)
-                    }
-                    loading={pendingAIEdit?.status === "loading"}
-                    onCancel={() => onToggleBulletAI?.(entryIndex, i)}
-                  />
-                )}
-
-              {isBulletPending && pendingAIEdit && onAIAccept && onAIReject && (
-                <>
-                  {pendingAIEdit.status === "loading" ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-accent-ai/20 bg-accent-ai/5 px-3 py-2 text-[12px] text-accent-ai">
-                      <Sparkles size={14} className="animate-pulse" />
-                      AI 正在生成建议...
-                    </div>
-                  ) : pendingAIEdit.status === "error" ? (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
-                      {pendingAIEdit.error}
-                      <button type="button" onClick={onAIReject} className="ml-2 underline">
-                        关闭
-                      </button>
-                    </div>
-                  ) : (
-                    <AIDiffView
-                      target={pendingAIEdit.target}
-                      original={pendingAIEdit.original}
-                      suggested={pendingAIEdit.suggested}
-                      onAccept={onAIAccept}
-                      onReject={onAIReject}
-                    />
-                  )}
-                </>
-              )}
             </div>
-          );
-        })}
+          ))}
       </div>
       <button
         type="button"
         onClick={add}
-        className="mt-1.5 flex items-center gap-1 text-[12px] text-ink-soft transition-colors hover:text-brand"
+        className="mt-2 flex items-center gap-1 text-[12px] text-ink-soft transition-colors hover:text-ink"
       >
         <Plus size={13} strokeWidth={2} />
         添加一条
@@ -286,18 +225,18 @@ export function TagInput({
           {label}
         </span>
       )}
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-ink-soft/15 bg-fog/40 p-2 focus-within:border-brand/40 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/20">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-ink-soft/10 bg-white p-2.5 focus-within:border-ink-soft/20 focus-within:ring-2 focus-within:ring-ink/5">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-[12px] font-medium text-brand"
+            className="flex items-center gap-1 rounded-full bg-fog-soft px-2.5 py-0.5 text-[12px] font-medium text-ink-soft"
           >
             {tag}
             <button
               type="button"
               onClick={() => onChange(tags.filter((t) => t !== tag))}
               aria-label={`删除 ${tag}`}
-              className="text-brand/70 hover:text-brand"
+              className="text-ink-muted hover:text-ink"
             >
               <X size={12} strokeWidth={2.5} />
             </button>
@@ -316,7 +255,7 @@ export function TagInput({
           }}
           onBlur={commit}
           placeholder={tags.length ? "" : placeholder}
-          className="min-w-[120px] flex-1 bg-transparent px-1 text-[13px] text-ink outline-none placeholder:text-ink-muted"
+          className="min-w-[120px] flex-1 bg-transparent px-1 text-[13px] text-ink-soft outline-none placeholder:text-ink-muted focus:text-ink"
         />
       </div>
     </div>

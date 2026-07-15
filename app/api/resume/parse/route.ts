@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { extractResumeText, ExtractError } from "@/lib/resume/extract";
 import { parseResumeText, AIError } from "@/lib/ai/deepseek";
 import { createResume } from "@/services/resumes";
+import { DEEPSEEK_API_KEY_HEADER } from "@/lib/ai/user-api-key";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,9 +21,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "未收到文件" }, { status: 400 });
   }
 
+  const userApiKey = request.headers.get(DEEPSEEK_API_KEY_HEADER);
+
   try {
     const text = await extractResumeText(file);
-    const { title, content } = await parseResumeText(text);
+    const { title, content } = await parseResumeText(text, {
+      apiKey: userApiKey,
+    });
 
     const persistedId = await createResume(title, content);
 

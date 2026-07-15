@@ -18,6 +18,7 @@ import {
   upsertLocalResume,
 } from "@/lib/resume/local-storage";
 import { emptyResumeContent } from "@/lib/resume/content";
+import { deepseekAuthHeaders } from "@/lib/ai/user-api-key";
 
 interface NewResumeDialogProps {
   open: boolean;
@@ -121,6 +122,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
     try {
       const res = await fetch("/api/resume/parse", {
         method: "POST",
+        headers: deepseekAuthHeaders(),
         body: formData,
       });
       clearTimeout(toParsing);

@@ -24,6 +24,28 @@ export const EDITOR_SECTIONS: EditorSection[] = [
   { id: "skills", type: "skills", title: "技能", icon: Wrench },
 ];
 
+const SECTION_BY_ID = Object.fromEntries(
+  EDITOR_SECTIONS.map((s) => [s.id, s])
+) as Record<string, EditorSection>;
+
+export function getEditorSectionsInOrder(
+  order: string[]
+): EditorSection[] {
+  const seen = new Set<string>();
+  const ordered: EditorSection[] = [];
+  for (const id of order) {
+    const section = SECTION_BY_ID[id];
+    if (section && !seen.has(id)) {
+      seen.add(id);
+      ordered.push(section);
+    }
+  }
+  for (const section of EDITOR_SECTIONS) {
+    if (!seen.has(section.id)) ordered.push(section);
+  }
+  return ordered;
+}
+
 export const AI_QUICK_PROMPTS = [
   "量化数据，强化成果",
   "精简表达，突出重点",

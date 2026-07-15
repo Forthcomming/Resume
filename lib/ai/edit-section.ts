@@ -1,10 +1,11 @@
-import { AIError } from "@/lib/ai/deepseek";
+import { AIError, resolveDeepseekApiKey } from "@/lib/ai/deepseek";
 import type { EditTarget } from "@/types/ai-edit";
 
 interface EditSectionParams {
   target: EditTarget;
   content: unknown;
   instruction: string;
+  apiKey?: string | null;
 }
 
 interface EditSectionResult {
@@ -14,11 +15,11 @@ interface EditSectionResult {
 
 const SECTION_SCHEMA_HINTS: Record<string, string> = {
   basic_info:
-    '{ "name": "", "email": "", "phone": "", "location": "", "linkedin": "", "github": "", "website": "" }',
+    '{ "name": "", "email": "", "phone": "", "location": "", "avatar": "", "target_cities": "", "desired_position": "", "website": "", "wechat": "", "linkedin": "", "github": "", "gender": "", "height": "", "weight": "", "ethnicity": "", "native_place": "", "political_status": "", "marital_status": "", "birthday": "" }',
   summary: '{ "text": "" }',
   work: '{ "entries": [{ "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM|present", "bullets": ["..."] }] }',
   education:
-    '{ "entries": [{ "school": "", "degree": "", "major": "", "startDate": "", "endDate": "", "gpa": "", "notes": ["..."] }] }',
+    '{ "entries": [{ "school": "", "schoolTag": "985|211|双一流|海外 QS Top|普通本科", "major": "", "degree": "高中|专科|本科|硕士|博士", "studyType": "全日制|非全日制|在职|交换", "college": "", "city": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM|present", "gpa": "", "notes": ["..."] }] }',
   project:
     '{ "entries": [{ "name": "", "role": "", "startDate": "", "endDate": "", "techStack": [""], "link": "", "bullets": ["..."] }] }',
   skills: '{ "categories": [{ "label": "", "items": ["..."] }] }',
@@ -74,16 +75,10 @@ function stripCodeFence(s: string): string {
 export async function editSectionContent(
   params: EditSectionParams
 ): Promise<EditSectionResult> {
-  const { target, content, instruction } = params;
+  const { target, content, instruction, apiKey: userApiKey } = params;
   const original = structuredClone(content);
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    throw new AIError(
-      "未配置 DEEPSEEK_API_KEY，请在 .env.local 中填入后重启服务",
-      503
-    );
-  }
+  const apiKey = resolveDeepseekApiKey(userApiKey);
 
   const baseUrl = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";

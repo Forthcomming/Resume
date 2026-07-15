@@ -18,10 +18,10 @@ const SYSTEM_PROMPT = `你是一个简历解析引擎。用户会给你一段从
 {
   "title": "简历标题，如 '张三·产品经理'，根据姓名与最近职位推断",
   "content": {
-    "basic_info": { "name": "", "email": "", "phone": "", "location": "", "linkedin": "", "github": "", "website": "" },
+    "basic_info": { "name": "", "email": "", "phone": "", "location": "", "avatar": "", "target_cities": "", "desired_position": "", "website": "", "wechat": "", "linkedin": "", "github": "", "gender": "", "height": "", "weight": "", "ethnicity": "", "native_place": "", "political_status": "", "marital_status": "", "birthday": "" },
     "summary": { "text": "个人简介/自我评价，没有则空字符串" },
     "work": { "entries": [ { "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "bullets": ["职责或成就，每条一句"] } ] },
-    "education": { "entries": [ { "school": "", "degree": "", "major": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "gpa": "", "notes": ["荣誉/课程"] } ] },
+    "education": { "entries": [ { "school": "", "schoolTag": "", "major": "", "degree": "", "studyType": "", "college": "", "city": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "gpa": "", "notes": ["荣誉/课程"] } ] },
     "project": { "entries": [ { "name": "", "role": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "techStack": ["技术名"], "link": "", "bullets": ["项目描述"] } ] },
     "skills": { "categories": [ { "label": "分类名，如 编程语言", "items": ["技能项"] } ] }
   }
@@ -39,17 +39,28 @@ interface ParseResult {
 }
 
 /**
- * Send extracted resume text to DeepSeek and get back structured content.
- * Throws AIError when the key is missing or the response is invalid.
+ * Prefer user-provided key from the request; fall back to server env for local/dev.
  */
-export async function parseResumeText(text: string): Promise<ParseResult> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+export function resolveDeepseekApiKey(userKey?: string | null): string {
+  const apiKey = userKey?.trim() || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     throw new AIError(
-      "未配置 DEEPSEEK_API_KEY，请在 .env.local 中填入后重启服务",
+      "请先在设置中配置 DeepSeek API Key",
       503
     );
   }
+  return apiKey;
+}
+
+/**
+ * Send extracted resume text to DeepSeek and get back structured content.
+ * Throws AIError when the key is missing or the response is invalid.
+ */
+export async function parseResumeText(
+  text: string,
+  options?: { apiKey?: string | null }
+): Promise<ParseResult> {
+  const apiKey = resolveDeepseekApiKey(options?.apiKey);
 
   const baseUrl = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";

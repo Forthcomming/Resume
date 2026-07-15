@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { editSectionContent } from "@/lib/ai/edit-section";
 import { AIError } from "@/lib/ai/deepseek";
+import { DEEPSEEK_API_KEY_HEADER } from "@/lib/ai/user-api-key";
 import type { EditTarget } from "@/types/ai-edit";
 
 export const runtime = "nodejs";
@@ -28,11 +29,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const userApiKey = request.headers.get(DEEPSEEK_API_KEY_HEADER);
+
   try {
     const result = await editSectionContent({
       target,
       content,
       instruction: instruction.trim(),
+      apiKey: userApiKey,
     });
     return NextResponse.json(result);
   } catch (err) {

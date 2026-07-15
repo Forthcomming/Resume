@@ -1,5 +1,6 @@
--- ResumeKit — resumes table (homepage / resume library)
--- Run this in the Supabase SQL editor.
+-- ResumeKit — resumes table + Anonymous Auth RLS
+-- Run in the Supabase SQL editor.
+-- Also enable: Authentication → Providers → Anonymous → Enable
 
 create extension if not exists "pgcrypto";
 
@@ -14,14 +15,12 @@ create table if not exists public.resumes (
   updated_at timestamptz not null default now()
 );
 
--- Structured resume content (added after initial release).
 alter table public.resumes
   add column if not exists content jsonb not null default '{}'::jsonb;
 
 create index if not exists resumes_user_id_updated_at_idx
   on public.resumes (user_id, updated_at desc);
 
--- Keep updated_at fresh on every write.
 create or replace function public.set_updated_at()
 returns trigger as $$
 begin
@@ -36,8 +35,32 @@ create trigger resumes_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- Seed data (mirrors the dashboard mockup). Demo user, no auth yet.
+-- Row Level Security — each auth user (incl. anonymous) only sees own rows
 -- ---------------------------------------------------------------------------
+alter table public.resumes enable row level security;
+
+drop policy if exists "resumes_select_own" on public.resumes;
+create policy "resumes_select_own"
+  on public.resumes for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "resumes_insert_own" on public.resumes;
+create policy "resumes_insert_own"
+  on public.resumes for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "resumes_update_own" on public.resumes;
+create policy "resumes_update_own"
+  on public.resumes for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "resumes_delete_own" on public.resumes;
+create policy "resumes_delete_own"
+  on public.resumes for delete
+  using (auth.uid() = user_id);
+
+-- Optional demo fixtures (not visible under RLS to real users).
 insert into public.resumes (id, user_id, title, tags, created_at, updated_at)
 values
   (

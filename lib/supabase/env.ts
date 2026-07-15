@@ -3,9 +3,11 @@ export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
- * Whether the server-side Supabase environment is fully configured.
- * When false, services fall back to local seed data so the app still runs.
+ * URL + anon key — enough for Auth (incl. anonymous) and RLS-scoped data access.
  */
-export const isSupabaseConfigured = Boolean(
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+/** Service-role available for trusted admin jobs only (bypasses RLS). */
+export const isSupabaseAdminConfigured = Boolean(
   supabaseUrl && supabaseServiceRoleKey
 );

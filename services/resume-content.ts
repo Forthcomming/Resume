@@ -1,18 +1,25 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   normalizeResumeContent,
   type ResumeContent,
 } from "@/lib/resume/content";
+import { getCurrentUserId } from "@/lib/auth/user";
+import { canPersistToCloud, isCloudSyncEnabled } from "@/lib/storage/mode";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 /**
- * Read structured content for a resume.
- * Returns null when Supabase is not configured (client falls back to localStorage).
+ * Read structured content for a resume from cloud (RLS).
+ * Returns null in local-first mode (client uses localStorage).
  */
 export async function getResumeContent(
   id: string
 ): Promise<ResumeContent | null> {
-  const supabase = getSupabaseServerClient();
+  if (!isCloudSyncEnabled() || !isSupabaseConfigured) return null;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
   const { data, error } = await supabase
@@ -27,14 +34,16 @@ export async function getResumeContent(
 }
 
 /**
- * Persist structured content for a resume using the service-role client.
- * Returns false when Supabase is not configured.
+ * Persist structured content via the user session (RLS).
  */
 export async function saveResumeContent(
   id: string,
   content: ResumeContent
 ): Promise<boolean> {
-  const supabase = getSupabaseAdminClient();
+  const userId = await getCurrentUserId();
+  if (!canPersistToCloud(userId)) return false;
+
+  const supabase = await getSupabaseServerClient();
   if (!supabase) return false;
 
   const { error } = await supabase
