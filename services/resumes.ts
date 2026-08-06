@@ -4,17 +4,12 @@ import { seedResumes } from "@/lib/resume/seed";
 import { getCurrentUserId } from "@/lib/auth/user";
 import { canPersistToCloud, isCloudSyncEnabled } from "@/lib/storage/mode";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  getSectionOrder,
+  initSectionSubVersionsStore,
+} from "@/lib/resume/versions";
 import type { Resume } from "@/types/resume";
 import type { ResumeContent } from "@/lib/resume/content";
-
-const DEFAULT_SECTION_ORDER = [
-  "basic_info",
-  "summary",
-  "work",
-  "education",
-  "project",
-  "skills",
-];
 
 function byUpdatedDesc(a: Resume, b: Resume): number {
   return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -103,14 +98,17 @@ export async function createResume(
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
+  const versionStore = initSectionSubVersionsStore(content);
+
   const { data, error } = await supabase
     .from("resumes")
     .insert({
       user_id: userId,
       title,
-      section_order: DEFAULT_SECTION_ORDER,
+      section_order: getSectionOrder(versionStore),
       tags: [],
       content,
+      version_store: versionStore,
     })
     .select("id")
     .single();

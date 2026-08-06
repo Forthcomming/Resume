@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getResume } from "@/services/resumes";
-import { getResumeContent } from "@/services/resume-content";
+import { getResumeWorkspace } from "@/services/resume-content";
 import { ResumeEditor } from "@/components/resume/editor/ResumeEditor";
 import { EnsureAnonymousSession } from "@/components/auth/EnsureAnonymousSession";
 
@@ -19,7 +19,7 @@ export default async function ResumeEditorPage({
     notFound();
   }
 
-  const initialContent = await getResumeContent(params.id);
+  const workspace = await getResumeWorkspace(params.id);
 
   return (
     <>
@@ -27,7 +27,9 @@ export default async function ResumeEditorPage({
       <ResumeEditor
         id={params.id}
         title={resume?.title ?? fallbackTitle ?? "未命名简历"}
-        initialContent={initialContent}
+        initialContent={workspace?.content ?? null}
+        initialVersionStore={workspace?.versionStore ?? null}
+        serverUpdatedAt={workspace?.updatedAt ?? null}
       />
     </>
   );

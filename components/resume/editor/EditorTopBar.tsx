@@ -4,18 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, FileText, Check, Download, Loader2, Pencil } from "lucide-react";
 
-export type SaveState = "saving" | "saved";
+export type SaveState = "saving" | "saved" | "error";
 
 export function EditorTopBar({
   title,
   saveState = "saved",
   onTitleChange,
   onExportPdf,
+  onRetrySave,
 }: {
   title: string;
   saveState?: SaveState;
   onTitleChange?: (title: string) => void;
   onExportPdf?: () => void;
+  onRetrySave?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -86,19 +88,27 @@ export function EditorTopBar({
         </button>
       )}
 
-      <span className="ml-1 flex items-center gap-1.5 rounded-full bg-fog-soft/80 px-2.5 py-1 text-[11px] text-ink-muted">
-        {saveState === "saving" ? (
-          <>
-            <Loader2 size={12} strokeWidth={2} className="animate-spin" />
-            保存中...
-          </>
-        ) : (
-          <>
-            <Check size={12} strokeWidth={2.5} className="text-accent-green" />
-            已保存
-          </>
-        )}
-      </span>
+      {saveState === "saving" ? (
+        <span className="ml-1 flex items-center gap-1.5 rounded-full bg-fog-soft/80 px-2.5 py-1 text-[11px] text-ink-muted">
+          <Loader2 size={12} strokeWidth={2} className="animate-spin" />
+          保存中...
+        </span>
+      ) : saveState === "error" ? (
+        <button
+          type="button"
+          onClick={onRetrySave}
+          title="点击重试"
+          className="ml-1 flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] text-red-600 transition-colors hover:bg-red-100"
+        >
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+          云端保存失败 · 已留本地
+        </button>
+      ) : (
+        <span className="ml-1 flex items-center gap-1.5 rounded-full bg-fog-soft/80 px-2.5 py-1 text-[11px] text-ink-muted">
+          <Check size={12} strokeWidth={2.5} className="text-accent-green" />
+          已保存
+        </span>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button

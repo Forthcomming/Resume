@@ -377,6 +377,14 @@ export function sanitizeSectionSubVersionsStore(
   };
 }
 
+/** Parse and sanitize a raw version_store blob (DB / network). Returns null if invalid. */
+export function parseSectionSubVersionsStore(
+  raw: unknown
+): SectionSubVersionsStore | null {
+  if (!isSectionSubVersionsStore(raw)) return null;
+  return sanitizeSectionSubVersionsStore(raw);
+}
+
 export function readSectionSubVersionsStore(
   resumeId: string
 ): SectionSubVersionsStore | null {

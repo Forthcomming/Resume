@@ -8,15 +8,12 @@ import {
   readLocalResumeIndex,
 } from "@/lib/resume/local-storage";
 import { emptyResumeContent } from "@/lib/resume/content";
-
-const DEFAULT_SECTION_ORDER = [
-  "basic_info",
-  "summary",
-  "work",
-  "education",
-  "project",
-  "skills",
-];
+import {
+  composeFromSectionSubVersions,
+  getSectionOrder,
+  initSectionSubVersionsStore,
+  readSectionSubVersionsStore,
+} from "@/lib/resume/versions";
 
 /**
  * Ensure a Supabase anonymous session exists (one-tap / silent).
@@ -59,25 +56,38 @@ export async function migrateLocalResumesToCloud(): Promise<void> {
 
   const entries = readLocalResumeIndex();
   for (const entry of entries) {
+    const localStore = readSectionSubVersionsStore(entry.id);
     const content =
-      readLocalResumeContent(entry.id) ?? emptyResumeContent();
+      (localStore
+        ? composeFromSectionSubVersions(localStore)
+        : readLocalResumeContent(entry.id)) ?? emptyResumeContent();
+    // Prefer real local store; only synthesize for brand-new cloud inserts.
+    const versionStore =
+      localStore ?? initSectionSubVersionsStore(content);
+    const sectionOrder = getSectionOrder(versionStore);
 
     const { data: existing } = await supabase
       .from("resumes")
-      .select("id")
+      .select("id, version_store")
       .eq("id", entry.id)
       .maybeSingle();
 
     if (existing) {
-      await supabase
-        .from("resumes")
-        .update({
-          title: entry.title,
-          tags: entry.tags,
-          content,
-          updated_at: entry.updatedAt || new Date().toISOString(),
-        })
-        .eq("id", entry.id);
+      const patch: Record<string, unknown> = {
+        title: entry.title,
+        tags: entry.tags,
+        content,
+        updated_at: entry.updatedAt || new Date().toISOString(),
+      };
+      // Don't wipe cloud multi-versions with a synthesized single-version store.
+      if (localStore) {
+        patch.version_store = versionStore;
+        patch.section_order = sectionOrder;
+      } else if (!existing.version_store) {
+        patch.version_store = versionStore;
+        patch.section_order = sectionOrder;
+      }
+      await supabase.from("resumes").update(patch).eq("id", entry.id);
       continue;
     }
 
@@ -86,8 +96,9 @@ export async function migrateLocalResumesToCloud(): Promise<void> {
       user_id: user.id,
       title: entry.title,
       tags: entry.tags,
-      section_order: DEFAULT_SECTION_ORDER,
+      section_order: sectionOrder,
       content,
+      version_store: versionStore,
       created_at: entry.createdAt || new Date().toISOString(),
       updated_at: entry.updatedAt || new Date().toISOString(),
     });

@@ -6,13 +6,14 @@ import { SectionEditorCard } from "./SectionEditorCard";
 import { ResumePreview } from "./ResumePreview";
 import { JDPanel } from "./JDPanel";
 import { getEditorSectionsInOrder } from "./sections";
-import { saveResumeContentAction, updateResumeTitleAction } from "@/app/resume/[id]/actions";
+import { saveResumeWorkspaceAction, updateResumeTitleAction } from "@/app/resume/[id]/actions";
 import {
   emptyResumeContent,
   normalizeResumeContent,
   type ResumeContent,
 } from "@/lib/resume/content";
 import {
+  readLocalResumeIndex,
   resumeContentKey,
   saveLocalResumeContent,
   touchLocalResumeUpdated,
@@ -55,11 +56,37 @@ interface ResumeEditorProps {
   id: string;
   title: string;
   initialContent: ResumeContent | null;
+  initialVersionStore?: SectionSubVersionsStore | null;
+  serverUpdatedAt?: string | null;
 }
 
 const storageKey = resumeContentKey;
 
-export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
+function isLocalNewer(
+  localUpdatedAt: string | null | undefined,
+  serverUpdatedAt: string | null | undefined
+): boolean {
+  if (!localUpdatedAt) return false;
+  if (!serverUpdatedAt) return true;
+  return new Date(localUpdatedAt).getTime() > new Date(serverUpdatedAt).getTime();
+}
+
+function persistLocalDraft(resumeId: string, content: ResumeContent): void {
+  try {
+    saveLocalResumeContent(resumeId, content);
+    touchLocalResumeUpdated(resumeId);
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+export function ResumeEditor({
+  id,
+  title,
+  initialContent,
+  initialVersionStore = null,
+  serverUpdatedAt = null,
+}: ResumeEditorProps) {
   const [store, setStore] = useState<SectionSubVersionsStore | null>(null);
   const [resumeTitle, setResumeTitle] = useState(title);
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -93,16 +120,50 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
       }
     }
 
-    const existing = readSectionSubVersionsStore(id);
-    if (existing) {
-      setStore(existing);
+    const localStore = readSectionSubVersionsStore(id);
+    const localUpdatedAt =
+      readLocalResumeIndex().find((e) => e.id === id)?.updatedAt ?? null;
+
+    if (
+      initialVersionStore &&
+      localStore &&
+      isLocalNewer(localUpdatedAt, serverUpdatedAt)
+    ) {
+      setStore(localStore);
+      void saveResumeWorkspaceAction(
+        id,
+        composeFromSectionSubVersions(localStore),
+        localStore
+      );
+      return;
+    }
+
+    if (initialVersionStore) {
+      setStore(initialVersionStore);
+      saveSectionSubVersionsStore(id, initialVersionStore);
+      return;
+    }
+
+    if (localStore) {
+      setStore(localStore);
+      if (serverUpdatedAt !== null || initialContent) {
+        void saveResumeWorkspaceAction(
+          id,
+          composeFromSectionSubVersions(localStore),
+          localStore
+        );
+      }
       return;
     }
 
     const next = initSectionSubVersionsStore(baseContent);
     setStore(next);
     saveSectionSubVersionsStore(id, next);
-  }, [id, initialContent]);
+    // Legacy cloud rows may only have flat content — backfill version_store.
+    if (initialContent && !initialVersionStore) {
+      void saveResumeWorkspaceAction(id, composeFromSectionSubVersions(next), next);
+    }
+  }, [id, initialContent, initialVersionStore, serverUpdatedAt]);
 
   const composedContent = useMemo(
     () => (store ? composeFromSectionSubVersions(store) : emptyResumeContent()),
@@ -123,28 +184,55 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
     ? getDateDisplayFormat(store)
     : "YYYY-MM";
 
+  const saveNow = useCallback(
+    async (
+      nextStore: SectionSubVersionsStore,
+      content: ResumeContent
+    ): Promise<void> => {
+      setSaveState("saving");
+      saveSectionSubVersionsStore(id, nextStore);
+      try {
+        const res = await saveResumeWorkspaceAction(id, content, nextStore);
+        if (!res.configured) {
+          persistLocalDraft(id, content);
+          setSaveState("saved");
+          return;
+        }
+        if (!res.ok) {
+          persistLocalDraft(id, content);
+          setSaveState("error");
+          return;
+        }
+        try {
+          touchLocalResumeUpdated(id);
+        } catch {
+          /* ignore */
+        }
+        setSaveState("saved");
+      } catch {
+        persistLocalDraft(id, content);
+        setSaveState("error");
+      }
+    },
+    [id]
+  );
+
+  const retrySave = useCallback(() => {
+    if (!store) return;
+    void saveNow(store, composedContent);
+  }, [store, composedContent, saveNow]);
+
   useEffect(() => {
     if (!store) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
     }
-    setSaveState("saving");
-    const t = setTimeout(async () => {
-      saveSectionSubVersionsStore(id, store);
-      const res = await saveResumeContentAction(id, composedContent);
-      if (!res.configured) {
-        try {
-          saveLocalResumeContent(id, composedContent);
-          touchLocalResumeUpdated(id);
-        } catch {
-          /* ignore quota errors */
-        }
-      }
-      setSaveState("saved");
+    const t = setTimeout(() => {
+      void saveNow(store, composedContent);
     }, 800);
     return () => clearTimeout(t);
-  }, [store, composedContent, id]);
+  }, [store, composedContent, saveNow]);
 
   const updateStore = useCallback(
     (updater: (s: SectionSubVersionsStore) => SectionSubVersionsStore) => {
@@ -436,6 +524,7 @@ export function ResumeEditor({ id, title, initialContent }: ResumeEditorProps) {
         saveState={saveState}
         onTitleChange={handleResumeTitleChange}
         onExportPdf={handleExportPdf}
+        onRetrySave={retrySave}
       />
 
       <div className="flex min-h-0 flex-1">

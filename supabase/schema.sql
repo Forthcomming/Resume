@@ -11,12 +11,18 @@ create table if not exists public.resumes (
   section_order jsonb not null default '[]'::jsonb,
   tags jsonb not null default '[]'::jsonb,
   content jsonb not null default '{}'::jsonb,
+  version_store jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.resumes
   add column if not exists content jsonb not null default '{}'::jsonb;
+
+-- Full SectionSubVersionsStore (sub-versions, order, titles, date format).
+-- NULL = legacy row; hydrate from content on first open.
+alter table public.resumes
+  add column if not exists version_store jsonb;
 
 create index if not exists resumes_user_id_updated_at_idx
   on public.resumes (user_id, updated_at desc);
