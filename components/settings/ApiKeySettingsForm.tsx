@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   clearSkippedApiKeySetup,
   clearUserDeepseekApiKey,
@@ -11,9 +10,16 @@ import {
 } from "@/lib/ai/user-api-key";
 
 export function ApiKeySettingsForm() {
-  const [current, setCurrent] = useState(() => getUserDeepseekApiKey());
+  // null until mount — avoid SSR/localStorage hydration mismatch
+  const [current, setCurrent] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setCurrent(getUserDeepseekApiKey());
+    setReady(true);
+  }, []);
 
   const refresh = () => setCurrent(getUserDeepseekApiKey());
 
@@ -55,7 +61,9 @@ export function ApiKeySettingsForm() {
 
       <div className="mt-4 rounded-xl bg-fog/60 px-3.5 py-3 text-[13px]">
         <span className="text-ink-muted">当前状态：</span>
-        {current ? (
+        {!ready ? (
+          <span className="ml-1 font-medium text-ink-muted">读取中…</span>
+        ) : current ? (
           <span className="ml-1 font-medium text-ink">
             已配置（{maskDeepseekApiKey(current)}）
           </span>
@@ -91,7 +99,7 @@ export function ApiKeySettingsForm() {
         >
           保存
         </button>
-        {current ? (
+        {ready && current ? (
           <button
             type="button"
             onClick={handleClear}
@@ -100,12 +108,6 @@ export function ApiKeySettingsForm() {
             清除
           </button>
         ) : null}
-        <Link
-          href="/dashboard"
-          className="inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-medium text-ink-soft transition-colors hover:text-ink"
-        >
-          返回简历库
-        </Link>
       </div>
     </div>
   );

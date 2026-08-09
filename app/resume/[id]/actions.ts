@@ -4,7 +4,7 @@ import {
   saveResumeContent,
   saveResumeWorkspace,
 } from "@/services/resume-content";
-import { updateResumeTitle } from "@/services/resumes";
+import { updateResumeTitle, deleteResume } from "@/services/resumes";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { ResumeContent } from "@/lib/resume/content";
 import type { SectionSubVersionsStore } from "@/lib/resume/versions";
@@ -40,5 +40,15 @@ export async function updateResumeTitleAction(
     return { ok: false, configured: false };
   }
   const ok = await updateResumeTitle(id, title.trim());
+  return { ok, configured: true };
+}
+
+export async function deleteResumeAction(
+  id: string
+): Promise<{ ok: boolean; configured: boolean }> {
+  if (!isSupabaseConfigured) {
+    return { ok: false, configured: false };
+  }
+  const ok = await deleteResume(id);
   return { ok, configured: true };
 }

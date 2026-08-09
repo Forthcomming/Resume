@@ -4,6 +4,10 @@ export const ENTERED_COOKIE_VALUE = "1";
 /** 1 year */
 export const ENTERED_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
+/** Intentional visit to marketing landing; skips returning-user auto-redirect. */
+export const LANDING_INTRO_QUERY = "intro";
+export const LANDING_INTRO_HREF = `/?${LANDING_INTRO_QUERY}=1`;
+
 function canUseDocumentCookie(): boolean {
   return typeof document !== "undefined";
 }

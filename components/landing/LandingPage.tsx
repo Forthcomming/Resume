@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { HeroSection } from "./HeroSection";
 import { StatsBar } from "./StatsBar";
 import { LandingNav } from "./LandingNav";
@@ -13,7 +14,9 @@ import { ReturningUserRedirect } from "./ReturningUserRedirect";
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-landing-bg">
-      <ReturningUserRedirect />
+      <Suspense fallback={null}>
+        <ReturningUserRedirect />
+      </Suspense>
       <LandingNav />
       <HeroSection />
       <StatsBar />

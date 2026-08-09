@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText, LayoutGrid, Settings, LogOut } from "lucide-react";
 import clsx from "clsx";
+import { LANDING_INTRO_HREF } from "@/lib/auth/entered-cookie";
 
 interface NavItem {
   label: string;
@@ -21,7 +22,7 @@ export function TopNav({
   return (
     <header className="sticky top-0 z-50 h-[52px] border-b border-white/50 bg-fog/85 backdrop-blur-md">
       <div className="relative mx-auto flex h-full max-w-content items-center px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href={LANDING_INTRO_HREF} className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-landing-cta text-white shadow-sm">
             <FileText size={14} strokeWidth={2.5} />
           </span>

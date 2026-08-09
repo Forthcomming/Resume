@@ -141,3 +141,19 @@ export async function updateResumeTitle(
 
   return !error;
 }
+
+/** Delete a resume (RLS). Returns false when cloud unavailable or delete failed. */
+export async function deleteResume(id: string): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!canPersistToCloud(userId)) return false;
+
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return false;
+
+  const { error } = await supabase.from("resumes").delete().eq("id", id);
+  if (error) {
+    console.error("[resumes] delete failed", error.message);
+    return false;
+  }
+  return true;
+}

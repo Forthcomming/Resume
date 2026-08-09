@@ -124,16 +124,30 @@ export function localEntryToResume(entry: LocalResumeEntry): Resume {
 
 /**
  * Merge server-side resumes with local-only entries.
- * Server wins when the same id exists in both.
+ * Same id: prefer newer of local vs server for title/updatedAt (keeps recent edits first).
  */
 export function mergeResumeLists(
   server: Resume[],
   local: LocalResumeEntry[]
 ): { resumes: Resume[]; localOnlyIds: Set<string> } {
+  const localById = new Map(local.map((e) => [e.id, e]));
   const serverIds = new Set(server.map((r) => r.id));
   const localOnlyIds = new Set<string>();
 
-  const merged = [...server];
+  const merged: Resume[] = server.map((s) => {
+    const l = localById.get(s.id);
+    if (!l) return s;
+    const localTs = new Date(l.updatedAt).getTime();
+    const serverTs = new Date(s.updatedAt).getTime();
+    if (Number.isNaN(localTs) || localTs <= serverTs) return s;
+    return {
+      ...s,
+      title: l.title,
+      updatedAt: l.updatedAt,
+      tags: l.tags.length > 0 ? l.tags : s.tags,
+    };
+  });
+
   for (const entry of local) {
     if (serverIds.has(entry.id)) continue;
     localOnlyIds.add(entry.id);

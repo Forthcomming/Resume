@@ -21,6 +21,7 @@ export function DashboardResumeList({
     const local = readLocalResumeIndex();
     return mergeResumeLists(serverResumes, local);
   });
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
 
   const refresh = useCallback(() => {
     const local = readLocalResumeIndex();
@@ -43,15 +44,20 @@ export function DashboardResumeList({
     };
   }, [refresh]);
 
+  const visible = merged.resumes.filter((r) => !hiddenIds.has(r.id));
+
   return (
     <>
       <p className="mt-1.5 text-[12px] text-ink-muted">
-        共 {merged.resumes.length} 份简历 · 上次编辑 今天
+        共 {visible.length} 份简历 · 上次编辑 今天
       </p>
       <div className="mt-4">
         <ResumeGrid
-          resumes={merged.resumes}
+          resumes={visible}
           localOnlyIds={merged.localOnlyIds}
+          onDeleted={(id) => {
+            setHiddenIds((prev) => new Set(prev).add(id));
+          }}
         />
       </div>
     </>

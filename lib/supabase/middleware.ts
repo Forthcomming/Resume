@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   ENTERED_COOKIE,
   ENTERED_COOKIE_VALUE,
+  LANDING_INTRO_QUERY,
 } from "@/lib/auth/entered-cookie";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 
@@ -18,8 +19,11 @@ function redirectHomeToDashboard(
 }
 
 function shouldRedirectEnteredHome(request: NextRequest): boolean {
+  if (request.nextUrl.pathname !== "/") return false;
+  if (request.nextUrl.searchParams.get(LANDING_INTRO_QUERY) === "1") {
+    return false;
+  }
   return (
-    request.nextUrl.pathname === "/" &&
     request.cookies.get(ENTERED_COOKIE)?.value === ENTERED_COOKIE_VALUE
   );
 }
