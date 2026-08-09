@@ -2,8 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { hasCompletedApiKeyGate } from "@/lib/ai/user-api-key";
 import { bootstrapCloudSession } from "@/lib/auth/anonymous";
+import { setEnteredCookie } from "@/lib/auth/entered-cookie";
 import { ApiKeySetupModal } from "./ApiKeySetupModal";
 
 interface EnterSystemButtonProps {
@@ -22,11 +24,13 @@ export function EnterSystemButton({
 
   const enterDashboard = async () => {
     setBusy(true);
+    setOpen(false);
     try {
       await bootstrapCloudSession();
+      setEnteredCookie();
       router.push("/dashboard");
       router.refresh();
-    } finally {
+    } catch {
       setBusy(false);
     }
   };
@@ -51,10 +55,32 @@ export function EnterSystemButton({
         {children}
       </button>
       <ApiKeySetupModal
-        open={open}
+        open={open && !busy}
         onClose={() => setOpen(false)}
         onContinue={enterDashboard}
       />
+      {busy ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-landing-ink/40 backdrop-blur-sm" />
+          <div
+            role="status"
+            aria-live="polite"
+            className="relative flex w-full max-w-sm flex-col items-center gap-3 rounded-[20px] border border-white/80 bg-white px-6 py-8 shadow-landing-lg"
+          >
+            <Loader2
+              size={28}
+              strokeWidth={2}
+              className="animate-spin text-landing-ink"
+            />
+            <p className="text-[16px] font-semibold text-landing-ink">
+              正在进入…
+            </p>
+            <p className="text-center text-[13px] leading-relaxed text-landing-muted">
+              正在进入工作台，请稍候
+            </p>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -4,6 +4,11 @@ import {
   formatDateRange,
   type DateDisplayFormat,
 } from "@/lib/resume/date-display";
+import {
+  DEFAULT_RESUME_DENSITY,
+  resumeDensityCssVars,
+  type ResumeDensity,
+} from "@/lib/resume/density";
 import type { BodySectionId, SectionId } from "@/lib/resume/versions";
 import {
   DEFAULT_SECTION_LABELS,
@@ -17,6 +22,7 @@ interface ResumePreviewProps {
   sectionOrder?: SectionId[];
   sectionTitles?: Partial<Record<SectionId, string>>;
   dateDisplayFormat?: DateDisplayFormat;
+  density?: ResumeDensity;
 }
 
 function resolveSectionTitle(
@@ -90,12 +96,19 @@ function BasicInfoPreviewLines({
   return (
     <>
       {contactLine ? (
-        <p className="mt-1.5 text-[11px] leading-[1.4] text-[#444]">{contactLine}</p>
+        <p className="mt-[var(--resume-header-gap)] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#444]">
+          {contactLine}
+        </p>
       ) : !hasHeaderInfo ? (
-        <p className="mt-1.5 text-[11px] leading-[1.4] text-[#999]">{title}</p>
+        <p className="mt-[var(--resume-header-gap)] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#999]">
+          {title}
+        </p>
       ) : null}
       {detailLines.map((line) => (
-        <p key={line} className="mt-1 text-[10px] leading-[1.5] text-[#555]">
+        <p
+          key={line}
+          className="mt-[calc(var(--resume-header-gap)*0.75)] text-[length:var(--resume-meta-size)] leading-[var(--resume-leading)] text-[#555]"
+        >
           {line}
         </p>
       ))}
@@ -105,7 +118,7 @@ function BasicInfoPreviewLines({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 border-b border-[#111] pb-1 text-[12px] font-bold uppercase tracking-[0.06em]">
+    <h2 className="mb-[var(--resume-section-title-mb)] border-b border-[#111] pb-1 text-[length:var(--resume-section-title-size)] font-bold uppercase tracking-[0.06em]">
       {children}
     </h2>
   );
@@ -115,7 +128,7 @@ function Bullets({ items }: { items: string[] }) {
   const visible = items.filter((b) => b.trim());
   if (visible.length === 0) return null;
   return (
-    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] leading-[1.5] text-[#222]">
+    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
       {visible.map((b, i) => (
         <li key={i}>{b}</li>
       ))}
@@ -134,7 +147,7 @@ function SummaryBlock({
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <p className="whitespace-pre-wrap text-[11px] leading-[1.5] text-[#222]">
+      <p className="whitespace-pre-wrap text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
         {content.text}
       </p>
     </section>
@@ -155,17 +168,17 @@ function WorkBlock({
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <div className="space-y-3">
+      <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
           <div key={i}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[12px] font-semibold">
+              <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
                 {e.company}
                 {e.title && (
                   <span className="font-normal text-[#444]"> · {e.title}</span>
                 )}
               </span>
-              <span className="shrink-0 text-[10px] text-[#666]">
+              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
                 {[dateRange(e.startDate, e.endDate, dateDisplayFormat), e.location]
                   .filter(Boolean)
                   .join(" · ")}
@@ -193,22 +206,22 @@ function ProjectBlock({
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <div className="space-y-3">
+      <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
           <div key={i}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[12px] font-semibold">
+              <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
                 {e.name}
                 {e.role && (
                   <span className="font-normal text-[#444]"> · {e.role}</span>
                 )}
               </span>
-              <span className="shrink-0 text-[10px] text-[#666]">
+              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
                 {dateRange(e.startDate, e.endDate, dateDisplayFormat)}
               </span>
             </div>
             {e.techStack.length > 0 && (
-              <p className="mt-0.5 text-[10px] text-[#666]">
+              <p className="mt-0.5 text-[length:var(--resume-meta-size)] text-[#666]">
                 {e.techStack.join(" / ")}
               </p>
             )}
@@ -234,12 +247,12 @@ function EducationBlock({
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <div className="space-y-3">
+      <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
           <div key={i}>
             <div className="flex items-baseline justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="text-[12px] font-semibold">
+                <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
                   {[e.city, e.school].filter(Boolean).join(" · ")}
                 </span>
                 {e.schoolTag && (
@@ -248,11 +261,11 @@ function EducationBlock({
                   </span>
                 )}
               </div>
-              <span className="shrink-0 text-[10px] text-[#666]">
+              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
                 {dateRange(e.startDate, e.endDate, dateDisplayFormat)}
               </span>
             </div>
-            <p className="text-[11px] text-[#444]">
+            <p className="text-[length:var(--resume-body-size)] text-[#444]">
               {[e.degree, e.studyType, e.major, e.college, e.gpa && `GPA ${e.gpa}`]
                 .filter(Boolean)
                 .join(" · ")}
@@ -279,9 +292,12 @@ function SkillsBlock({
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         {content.categories.map((c, i) => (
-          <p key={i} className="text-[11px] leading-[1.5] text-[#222]">
+          <p
+            key={i}
+            className="text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]"
+          >
             {c.label && <span className="font-semibold">{c.label}：</span>}
             {c.items.join("、")}
           </p>
@@ -343,6 +359,7 @@ export function ResumePreview({
   sectionOrder,
   sectionTitles,
   dateDisplayFormat = DEFAULT_DATE_DISPLAY_FORMAT,
+  density = DEFAULT_RESUME_DENSITY,
 }: ResumePreviewProps) {
   const { basic_info, summary, work, education, project, skills } = content;
 
@@ -363,12 +380,17 @@ export function ResumePreview({
     education.entries.some((e) => e.school || e.major) ||
     skills.categories.some((c) => c.label || c.items.length > 0);
 
+  const densityVars = resumeDensityCssVars(density);
+
   return (
     <div className="resume-print-wrapper flex justify-center py-8">
       <div className="w-full max-w-[680px] shrink-0">
         <div
-          className="resume-print-root aspect-[210/297] w-full rounded-[4px] bg-white px-[9.5%] py-[6%] text-[#111] shadow-[0_16px_48px_rgba(15,25,36,0.12),0_4px_12px_rgba(15,25,36,0.06)] ring-1 ring-white/80"
-          style={{ fontFamily: "var(--font-inter), Inter, sans-serif" }}
+          className="resume-print-root aspect-[210/297] w-full rounded-[4px] bg-white px-[var(--resume-pad-x)] py-[var(--resume-pad-y)] text-[#111] shadow-[0_16px_48px_rgba(15,25,36,0.12),0_4px_12px_rgba(15,25,36,0.06)] ring-1 ring-white/80"
+          style={{
+            fontFamily: "var(--font-inter), Inter, sans-serif",
+            ...densityVars,
+          }}
         >
           <header>
             <div className="flex items-start gap-4">
@@ -377,11 +399,11 @@ export function ResumePreview({
                 <img
                   src={basic_info.avatar}
                   alt=""
-                  className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                  className="h-[var(--resume-avatar-size)] w-[var(--resume-avatar-size)] shrink-0 rounded-lg object-cover"
                 />
               ) : null}
               <div className="min-w-0 flex-1">
-                <h1 className="text-[24px] font-bold leading-tight tracking-tight">
+                <h1 className="text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight">
                   {basic_info.name || "你的姓名"}
                 </h1>
                 <BasicInfoPreviewLines basic_info={basic_info} title={title} />
@@ -389,7 +411,7 @@ export function ResumePreview({
             </div>
           </header>
 
-          <div className="mt-6 space-y-5">
+          <div className="mt-[var(--resume-body-mt)] flex flex-col gap-[var(--resume-section-gap)]">
             {orderedBody.map((sectionId) => (
               <BodySection
                 key={sectionId}
@@ -401,7 +423,7 @@ export function ResumePreview({
             ))}
 
             {!hasAnyBody && (
-              <p className="text-[11px] italic text-[#bbb]">
+              <p className="text-[length:var(--resume-body-size)] italic text-[#bbb]">
                 在左侧填写内容后将在此处实时预览
               </p>
             )}

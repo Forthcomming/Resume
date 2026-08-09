@@ -9,6 +9,11 @@ import {
   isDateDisplayFormat,
   type DateDisplayFormat,
 } from "@/lib/resume/date-display";
+import {
+  DEFAULT_RESUME_DENSITY,
+  isResumeDensity,
+  type ResumeDensity,
+} from "@/lib/resume/density";
 
 export type SectionId = keyof ResumeContent;
 
@@ -36,6 +41,8 @@ export interface SectionSubVersionsStore {
   sectionTitles: Partial<Record<SectionId, string>>;
   /** Shared date format for preview (education / work / project). */
   dateDisplayFormat?: DateDisplayFormat;
+  /** Preview/print density preset. */
+  density?: ResumeDensity;
   sections: {
     [K in SectionId]: SectionBucket<ResumeContent[K]>;
   };
@@ -99,6 +106,22 @@ export function setDateDisplayFormat(
   format: DateDisplayFormat
 ): SectionSubVersionsStore {
   return { ...store, dateDisplayFormat: format };
+}
+
+export function getResumeDensity(store: SectionSubVersionsStore): ResumeDensity {
+  return isResumeDensity(store.density)
+    ? store.density
+    : DEFAULT_RESUME_DENSITY;
+}
+
+export function setResumeDensity(
+  store: SectionSubVersionsStore,
+  density: ResumeDensity
+): SectionSubVersionsStore {
+  return {
+    ...store,
+    density: isResumeDensity(density) ? density : DEFAULT_RESUME_DENSITY,
+  };
 }
 
 export function getSectionDisplayTitle(
@@ -259,6 +282,7 @@ export function initSectionSubVersionsStore(
     sectionOrder: defaultSectionOrder(),
     sectionTitles: {},
     dateDisplayFormat: DEFAULT_DATE_DISPLAY_FORMAT,
+    density: DEFAULT_RESUME_DENSITY,
     sections: {
       basic_info: emptyBucket("basic_info", normalized.basic_info),
       summary: emptyBucket("summary", normalized.summary),
@@ -321,6 +345,7 @@ export function migrateLegacyVersionStore(
     sectionOrder: defaultSectionOrder(),
     sectionTitles: {},
     dateDisplayFormat: DEFAULT_DATE_DISPLAY_FORMAT,
+    density: DEFAULT_RESUME_DENSITY,
     sections: {
       basic_info: migrateSectionBucket("basic_info", legacy),
       summary: migrateSectionBucket("summary", legacy),
@@ -366,6 +391,7 @@ export function sanitizeSectionSubVersionsStore(
     sectionOrder: sanitizeSectionOrder(store.sectionOrder),
     sectionTitles: sanitizeSectionTitles(store.sectionTitles),
     dateDisplayFormat: getDateDisplayFormat(store),
+    density: getResumeDensity(store),
     sections: {
       basic_info: sanitizeSectionBucket("basic_info", store.sections?.basic_info),
       summary: sanitizeSectionBucket("summary", store.sections?.summary),

@@ -3,18 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, FileText, Check, Download, Loader2, Pencil } from "lucide-react";
+import type { ResumeDensity } from "@/lib/resume/density";
+import { DensityToggle } from "./DensityToggle";
 
 export type SaveState = "saving" | "saved" | "error";
 
 export function EditorTopBar({
   title,
   saveState = "saved",
+  density,
+  onDensityChange,
   onTitleChange,
   onExportPdf,
   onRetrySave,
 }: {
   title: string;
   saveState?: SaveState;
+  density?: ResumeDensity;
+  onDensityChange?: (density: ResumeDensity) => void;
   onTitleChange?: (title: string) => void;
   onExportPdf?: () => void;
   onRetrySave?: () => void;
@@ -111,6 +117,9 @@ export function EditorTopBar({
       )}
 
       <div className="ml-auto flex items-center gap-2">
+        {density && onDensityChange ? (
+          <DensityToggle value={density} onChange={onDensityChange} />
+        ) : null}
         <button
           type="button"
           onClick={onExportPdf}

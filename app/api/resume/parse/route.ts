@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractResumeText, ExtractError } from "@/lib/resume/extract";
+import { extractAvatarFromResumeFile } from "@/lib/resume/avatar-from-file";
 import { parseResumeText, AIError } from "@/lib/ai/deepseek";
 import { createResume } from "@/services/resumes";
 import { DEEPSEEK_API_KEY_HEADER } from "@/lib/ai/user-api-key";
@@ -28,6 +29,13 @@ export async function POST(request: Request) {
     const { title, content } = await parseResumeText(text, {
       apiKey: userApiKey,
     });
+
+    if (!content.basic_info.avatar?.trim()) {
+      const avatar = await extractAvatarFromResumeFile(file);
+      if (avatar) {
+        content.basic_info.avatar = avatar;
+      }
+    }
 
     const persistedId = await createResume(title, content);
 

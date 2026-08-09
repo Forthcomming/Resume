@@ -8,10 +8,12 @@ import { StoryCardsSection } from "./StoryCardsSection";
 import { FAQSection } from "./FAQSection";
 import { FinalCTASection } from "./FinalCTASection";
 import { LandingFooter } from "./LandingFooter";
+import { ReturningUserRedirect } from "./ReturningUserRedirect";
 
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-landing-bg">
+      <ReturningUserRedirect />
       <LandingNav />
       <HeroSection />
       <StatsBar />
