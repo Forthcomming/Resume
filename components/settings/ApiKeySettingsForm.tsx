@@ -44,7 +44,7 @@ export function ApiKeySettingsForm() {
   };
 
   return (
-    <div className="rounded-panel border border-white/70 bg-white p-6 shadow-card">
+    <div className="glass-panel rounded-panel p-6">
       <h2 className="text-[16px] font-semibold text-ink">DeepSeek API Key</h2>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
         用于简历解析与 AI 改写。Key 仅保存在本机浏览器，不会上传到我们的数据库。可在{" "}
@@ -83,7 +83,7 @@ export function ApiKeySettingsForm() {
             if (message) setMessage("");
           }}
           placeholder="sk-..."
-          className="mt-1.5 h-10 w-full rounded-xl border border-ink-soft/10 bg-white px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/15"
+          className="glass-control mt-1.5 h-10 w-full rounded-xl px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/15"
         />
       </label>
 

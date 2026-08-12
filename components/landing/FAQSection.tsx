@@ -15,7 +15,7 @@ export function FAQSection() {
           常见问题解答
         </h2>
 
-        <div className="mt-10 overflow-hidden rounded-landing border border-white/80 bg-white shadow-landing">
+        <div className="glass-panel mt-10 overflow-hidden rounded-landing">
           {FAQS.map((faq, i) => {
             const open = openIndex === i;
             return (

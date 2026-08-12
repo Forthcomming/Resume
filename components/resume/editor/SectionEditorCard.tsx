@@ -92,11 +92,11 @@ export function SectionEditorCard({
         onDragEnd?.();
       }}
       className={clsx(
-        "overflow-hidden rounded-[18px] border bg-white/95 shadow-card backdrop-blur-sm transition-all",
+        "glass-panel overflow-hidden rounded-[18px] transition-all",
         isDragging && "opacity-40 scale-[0.99]",
         isDragOver
           ? "border-ink/25 shadow-card-hover ring-2 ring-ink/10"
-          : "border-white/70"
+          : ""
       )}
     >
       <div className="flex flex-wrap items-center gap-2.5 border-b border-fog-soft/80 px-5 py-3.5">

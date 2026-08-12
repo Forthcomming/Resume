@@ -7,7 +7,7 @@ const VERSIONS = [
 export function HeroMockup() {
   return (
     <div className="relative mx-auto w-full max-w-[440px] lg:max-w-none">
-      <div className="rounded-landing border border-white/80 bg-white p-5 shadow-landing-lg">
+      <div className="glass-panel rounded-landing p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-[12px] font-medium text-landing-muted">

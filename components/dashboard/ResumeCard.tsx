@@ -11,13 +11,29 @@ import {
   updateResumeTitleAction,
 } from "@/app/resume/[id]/actions";
 
-function formatDate(iso: string): string {
+function formatUpdatedAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (isSameDay(d, now)) return `今天 ${time}`;
+  if (isSameDay(d, yesterday)) return `昨天 ${time}`;
+
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  return `${y}-${m}-${day} ${time}`;
 }
 
 export function ResumeCard({
@@ -95,7 +111,7 @@ export function ResumeCard({
     <div className="group relative">
       <Link
         href={href}
-        className="flex min-h-[150px] flex-col rounded-card border border-white/70 bg-white p-4 shadow-card transition-shadow hover:shadow-card-hover"
+        className="glass-panel flex min-h-[150px] flex-col rounded-card p-4 shadow-glass transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-glass-hover active:translate-y-0"
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-landing-cta/10 text-landing-cta">
           <FileText size={16} strokeWidth={2} />
@@ -117,7 +133,7 @@ export function ResumeCard({
         </div>
 
         <p className="mt-auto pt-3 text-[12px] text-ink-muted">
-          更新于 {formatDate(resume.updatedAt)}
+          更新于 {formatUpdatedAt(resume.updatedAt)}
         </p>
       </Link>
 
@@ -132,7 +148,7 @@ export function ResumeCard({
             e.stopPropagation();
             setMenuOpen((v) => !v);
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink-soft/10 bg-white/95 text-ink-soft shadow-sm opacity-100 transition-opacity hover:text-ink disabled:opacity-50 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          className="glass-control flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft opacity-100 transition-opacity hover:text-ink disabled:opacity-50 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
         >
           <MoreHorizontal size={16} strokeWidth={2} />
         </button>
@@ -140,7 +156,7 @@ export function ResumeCard({
         {menuOpen ? (
           <div
             role="menu"
-            className="absolute right-0 mt-1 w-36 overflow-hidden rounded-xl border border-ink-soft/10 bg-white py-1 shadow-lg"
+            className="glass-control absolute right-0 mt-1 w-36 overflow-hidden rounded-xl py-1"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -184,7 +200,7 @@ export function ResumeCard({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`rename-resume-${resume.id}`}
-            className="relative w-full max-w-sm rounded-[20px] border border-white/80 bg-white p-5 shadow-landing-lg"
+            className="glass-panel relative w-full max-w-sm rounded-[20px] p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <h2
@@ -202,7 +218,7 @@ export function ResumeCard({
                 if (e.key === "Enter") void handleRename();
                 if (e.key === "Escape") setRenaming(false);
               }}
-              className="mt-3 h-10 w-full rounded-xl border border-ink-soft/10 bg-white px-3.5 text-[13px] text-ink outline-none focus:ring-2 focus:ring-landing-cta/15"
+              className="glass-control mt-3 h-10 w-full rounded-xl px-3.5 text-[13px] text-ink outline-none focus:ring-2 focus:ring-landing-cta/15"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -236,7 +252,7 @@ export function ResumeCard({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`delete-resume-${resume.id}`}
-            className="relative w-full max-w-sm rounded-[20px] border border-white/80 bg-white p-5 shadow-landing-lg"
+            className="glass-panel relative w-full max-w-sm rounded-[20px] p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <h2

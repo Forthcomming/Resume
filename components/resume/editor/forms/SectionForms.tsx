@@ -79,12 +79,12 @@ function AvatarField({
         <CloudUpload size={13} strokeWidth={2} />
         上传头像
       </button>
-      <div className="flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-2xl border border-ink-soft/10 bg-white">
+      <div className="flex h-[112px] w-[84px] items-center justify-center overflow-hidden rounded-md border border-ink-soft/10 bg-white">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={value} alt="头像" className="h-full w-full object-cover" />
         ) : (
-          <User size={32} strokeWidth={1.5} className="text-ink-muted/40" />
+          <User size={28} strokeWidth={1.5} className="text-ink-muted/40" />
         )}
       </div>
       <input
@@ -397,7 +397,7 @@ function WorkExperienceForm({
           <div className="grid grid-cols-2 gap-3">
             <TextField label="公司" value={e.company} onChange={(v) => update(i, { company: v })} placeholder="字节跳动" />
             <TextField label="职位" value={e.title} onChange={(v) => update(i, { title: v })} placeholder="产品经理" />
-            <TextField label="地点" value={e.location} onChange={(v) => update(i, { location: v })} placeholder="北京" />
+            <TextField label="工作地点" value={e.location} onChange={(v) => update(i, { location: v })} placeholder="北京" />
             <div className="col-span-2">
               <DateRangeField
                 startDate={e.startDate}

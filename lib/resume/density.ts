@@ -33,7 +33,9 @@ const DENSITY_TOKENS: Record<ResumeDensity, ResumeDensityCssVars> = {
     "--resume-entry-gap": "0.4rem",
     "--resume-section-title-mb": "0.25rem",
     "--resume-header-gap": "0.35rem",
-    "--resume-avatar-size": "3rem",
+    /* Portrait ID photo ~3:4 */
+    "--resume-avatar-w": "2.25rem",
+    "--resume-avatar-h": "3rem",
   },
   standard: {
     "--resume-pad-x": "9.5%",
@@ -49,7 +51,8 @@ const DENSITY_TOKENS: Record<ResumeDensity, ResumeDensityCssVars> = {
     "--resume-entry-gap": "0.75rem",
     "--resume-section-title-mb": "0.5rem",
     "--resume-header-gap": "0.375rem",
-    "--resume-avatar-size": "4rem",
+    "--resume-avatar-w": "3rem",
+    "--resume-avatar-h": "4rem",
   },
   relaxed: {
     "--resume-pad-x": "11%",
@@ -65,7 +68,8 @@ const DENSITY_TOKENS: Record<ResumeDensity, ResumeDensityCssVars> = {
     "--resume-entry-gap": "1rem",
     "--resume-section-title-mb": "0.65rem",
     "--resume-header-gap": "0.5rem",
-    "--resume-avatar-size": "4.25rem",
+    "--resume-avatar-w": "3.2rem",
+    "--resume-avatar-h": "4.25rem",
   },
 };
 

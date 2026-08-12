@@ -16,6 +16,7 @@ export function EditorTopBar({
   onTitleChange,
   onExportPdf,
   onRetrySave,
+  exportingPdf = false,
 }: {
   title: string;
   saveState?: SaveState;
@@ -24,6 +25,7 @@ export function EditorTopBar({
   onTitleChange?: (title: string) => void;
   onExportPdf?: () => void;
   onRetrySave?: () => void;
+  exportingPdf?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -45,7 +47,7 @@ export function EditorTopBar({
   };
 
   return (
-    <header className="no-print flex h-14 shrink-0 items-center gap-3 border-b border-white/60 bg-white/75 px-5 shadow-[0_1px_0_rgba(15,25,36,0.04)] backdrop-blur-md">
+    <header className="glass-surface no-print flex h-14 shrink-0 items-center gap-3 px-5">
       <Link
         href="/dashboard"
         aria-label="返回"
@@ -71,7 +73,7 @@ export function EditorTopBar({
               setEditing(false);
             }
           }}
-          className="h-8 min-w-0 max-w-[280px] flex-1 rounded-full border border-ink-soft/15 bg-white px-3 text-[15px] font-medium tracking-tight text-ink outline-none focus:border-ink-soft/25 focus:ring-2 focus:ring-ink/5"
+          className="glass-control h-8 min-w-0 max-w-[280px] flex-1 rounded-full px-3 text-[15px] font-medium tracking-tight text-ink outline-none focus:border-ink-soft/25 focus:ring-2 focus:ring-ink/5"
           aria-label="简历标题"
         />
       ) : (
@@ -123,10 +125,15 @@ export function EditorTopBar({
         <button
           type="button"
           onClick={onExportPdf}
-          className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_14px_rgba(15,25,36,0.18)] transition-colors hover:bg-[#1A2D40]"
+          disabled={exportingPdf}
+          className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_14px_rgba(15,25,36,0.18)] transition-colors hover:bg-[#1A2D40] disabled:opacity-60"
         >
-          <Download size={15} strokeWidth={2} />
-          导出 PDF
+          {exportingPdf ? (
+            <Loader2 size={15} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <Download size={15} strokeWidth={2} />
+          )}
+          {exportingPdf ? "导出中…" : "导出 PDF"}
         </button>
       </div>
     </header>

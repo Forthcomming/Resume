@@ -63,6 +63,7 @@ function BasicInfoPreviewLines({
     basic_info.email,
     basic_info.phone,
     basic_info.birthday,
+    basic_info.location,
   ]
     .filter((c) => c.trim())
     .join("　|　");
@@ -87,7 +88,6 @@ function BasicInfoPreviewLines({
     { label: "婚姻状况", value: basic_info.marital_status },
     { label: "身高", value: basic_info.height },
     { label: "体重", value: basic_info.weight },
-    { label: "现居城市", value: basic_info.location },
   ]);
 
   const detailLines = [jobLine, socialLine, otherLine].filter(Boolean);
@@ -399,7 +399,7 @@ export function ResumePreview({
                 <img
                   src={basic_info.avatar}
                   alt=""
-                  className="h-[var(--resume-avatar-size)] w-[var(--resume-avatar-size)] shrink-0 rounded-lg object-cover"
+                  className="h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] shrink-0 rounded-md object-cover"
                 />
               ) : null}
               <div className="min-w-0 flex-1">

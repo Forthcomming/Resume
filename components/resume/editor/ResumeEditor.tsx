@@ -499,9 +499,29 @@ export function ResumeEditor({
     [bulletAIOpen, aiOpenSections, handleBulletAIRequest, handleSectionAIRequest]
   );
 
-  const handleExportPdf = useCallback(() => {
-    window.print();
-  }, []);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleExportPdf = useCallback(async () => {
+    if (exportingPdf) return;
+    const root = document.querySelector(
+      ".resume-print-root"
+    ) as HTMLElement | null;
+    if (!root) return;
+
+    setExportingPdf(true);
+    try {
+      const { downloadResumePdf } = await import("@/lib/resume/export-pdf");
+      await downloadResumePdf({
+        element: root,
+        filename: resumeTitle || "resume",
+      });
+    } catch (err) {
+      console.error("[export-pdf]", err);
+      window.alert("导出 PDF 失败，请稍后重试");
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [exportingPdf, resumeTitle]);
 
   const handleResumeTitleChange = useCallback(
     async (nextTitle: string) => {
@@ -540,11 +560,12 @@ export function ResumeEditor({
         onDensityChange={handleDensityChange}
         onTitleChange={handleResumeTitleChange}
         onExportPdf={handleExportPdf}
+        exportingPdf={exportingPdf}
         onRetrySave={retrySave}
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className="no-print flex w-1/2 min-w-0 flex-col border-r border-white/50 bg-white/25 backdrop-blur-[2px]">
+        <div className="glass-surface no-print flex w-1/2 min-w-0 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-auto p-5">
             {orderedSections.map((section) => {
               const sectionId = section.id as SectionId;

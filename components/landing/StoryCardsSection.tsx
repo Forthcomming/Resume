@@ -18,7 +18,7 @@ export function StoryCardsSection() {
           {STORY_CARDS.map((card) => (
             <article
               key={card.role}
-              className="flex flex-col rounded-landing border border-white/80 bg-white p-6 shadow-landing"
+              className="glass-panel flex flex-col rounded-landing p-6"
             >
               <span
                 className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[12px] font-medium ${TAG_STYLE[card.accent]}`}

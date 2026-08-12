@@ -5,7 +5,7 @@ import { EnterSystemButton } from "@/components/settings/EnterSystemButton";
 
 export function LandingNav() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-md">
+    <header className="glass-surface sticky top-0 z-50">
       <div className="relative mx-auto flex h-14 max-w-content items-center px-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-landing-cta text-white shadow-sm">

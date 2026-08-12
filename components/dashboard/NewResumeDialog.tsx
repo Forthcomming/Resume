@@ -45,7 +45,7 @@ function OptionCard({ icon: Icon, title, description, onClick }: OptionCardProps
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col rounded-card border border-white/70 bg-white p-5 text-left shadow-card transition-shadow hover:shadow-card-hover"
+      className="glass-panel group flex flex-col rounded-card p-5 text-left shadow-glass transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-glass-hover active:translate-y-0"
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-landing-cta/10 text-landing-cta">
         <Icon size={18} strokeWidth={2} />
@@ -189,7 +189,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
         aria-modal="true"
         aria-label="开始新的简历"
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[540px] rounded-panel border border-white/70 bg-fog bg-[radial-gradient(ellipse_at_50%_0%,#eef3fa_0%,#e2ebf4_55%,#d8e5f0_100%)] p-7 shadow-data"
+        className="glass-panel relative w-full max-w-[540px] rounded-panel p-7"
       >
         {!isProcessing && (
           <button
@@ -260,10 +260,10 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
                 handleFiles(e.dataTransfer.files);
               }}
               className={clsx(
-                "mt-5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border-2 border-dashed px-6 py-10 text-center transition-colors",
+                "glass-control mt-5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border-2 border-dashed px-6 py-10 text-center transition-colors",
                 dragActive
                   ? "border-landing-cta bg-landing-cta/5"
-                  : "border-ink-soft/25 hover:border-landing-cta/40 hover:bg-white/40"
+                  : "hover:border-landing-cta/40 hover:bg-white/40"
               )}
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-ink/5 text-ink-soft">
@@ -330,7 +330,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
                   if (e.key === "Enter") startScratch();
                 }}
                 placeholder="例如：字节跳动·产品经理"
-                className="mt-3 h-11 w-full rounded-[10px] border border-white/70 bg-white px-3.5 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/20"
+                className="glass-control mt-3 h-11 w-full rounded-[10px] px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-landing-cta/20"
               />
 
               <button

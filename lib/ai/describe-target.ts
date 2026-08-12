@@ -31,10 +31,10 @@ export function aiPromptPlaceholder(
   sectionTitle: string
 ): string {
   if (!target) {
-    return "输入改写指令，如：量化数据、突出成果";
+    return "例如：精炼到 3 句、突出数据成果、更像产品岗表述";
   }
   if (target.scope === "bullet") {
-    return "优化此条描述，如：加入量化数据、突出业务影响";
+    return "例如：用成果导向重写、补上可量化影响、删掉空话";
   }
-  return `优化「${sectionTitle}」，如：改得更有数据感、更贴合产品岗`;
+  return `例如：精炼「${sectionTitle}」、突出核心能力与成果、更贴目标岗位`;
 }

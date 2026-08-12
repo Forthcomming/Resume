@@ -61,6 +61,10 @@ const config: Config = {
         "card-hover":
           "0 8px 40px rgba(15,25,36,0.12), 0 2px 8px rgba(15,25,36,0.06)",
         data: "0 12px 48px rgba(15,25,36,0.15), 0 4px 12px rgba(15,25,36,0.08)",
+        glass:
+          "inset 0 1px 0 rgba(255,255,255,0.85), 0 10px 30px rgba(53,89,128,0.10)",
+        "glass-hover":
+          "inset 0 1px 0 rgba(255,255,255,0.92), 0 16px 40px rgba(53,89,128,0.15)",
         landing:
           "0 4px 24px rgba(30,41,59,0.06), 0 1px 4px rgba(30,41,59,0.04)",
         "landing-lg":

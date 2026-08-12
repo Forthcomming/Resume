@@ -8,7 +8,7 @@ export function JDPanel() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="shrink-0 border-t border-white/60 bg-white/80 backdrop-blur-md">
+    <div className="glass-panel shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -38,12 +38,12 @@ export function JDPanel() {
           <input
             type="text"
             placeholder="目标岗位名称，如：字节跳动 · 高级产品经理"
-            className="h-10 w-full rounded-xl border border-ink-soft/10 bg-fog-soft/50 px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:border-ink-soft/20 focus:bg-white focus:ring-2 focus:ring-ink/5"
+            className="glass-control h-10 w-full rounded-xl px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-muted focus:border-ink-soft/20 focus:bg-white focus:ring-2 focus:ring-ink/5"
           />
           <textarea
             rows={4}
             placeholder="粘贴目标岗位 JD 全文，AI 将结合你的简历提炼核心优势..."
-            className="w-full resize-none rounded-xl border border-ink-soft/10 bg-fog-soft/50 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink-muted focus:border-ink-soft/20 focus:bg-white focus:ring-2 focus:ring-ink/5"
+            className="glass-control w-full resize-none rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink-muted focus:border-ink-soft/20 focus:bg-white focus:ring-2 focus:ring-ink/5"
           />
           <button
             type="button"

@@ -20,7 +20,7 @@ export function TopNav({
   activeHref?: string;
 }) {
   return (
-    <header className="sticky top-0 z-50 h-[52px] border-b border-white/50 bg-fog/85 backdrop-blur-md">
+    <header className="glass-surface sticky top-0 z-50 h-[52px]">
       <div className="relative mx-auto flex h-full max-w-content items-center px-6">
         <Link href={LANDING_INTRO_HREF} className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-landing-cta text-white shadow-sm">
@@ -42,7 +42,7 @@ export function TopNav({
                 className={clsx(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] transition-colors",
                   active
-                    ? "bg-white text-ink shadow-sm"
+                    ? "glass-control text-ink"
                     : "text-ink-soft hover:text-ink"
                 )}
               >

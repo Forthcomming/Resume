@@ -76,7 +76,7 @@ export function AIModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="ai-modal-title"
-        className="relative z-10 flex w-full max-w-2xl max-h-[min(88vh,680px)] flex-col overflow-hidden rounded-[20px] border border-white/80 bg-white shadow-[0_24px_64px_rgba(15,25,36,0.18),0_8px_24px_rgba(15,25,36,0.08)]"
+        className="glass-panel relative z-10 flex w-full max-w-2xl max-h-[min(88vh,680px)] flex-col overflow-hidden rounded-[20px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-fog-soft/80 px-5 py-4">
