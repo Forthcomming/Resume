@@ -1,10 +1,8 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { A4_HEIGHT_MM, A4_WIDTH_MM } from "@/lib/resume/a4";
 
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
-
-/** Capture `.resume-print-root` and download a multi-page A4 PDF. */
+/** Capture full resume root and download a multi-page A4 PDF. */
 export async function downloadResumePdf(options: {
   element: HTMLElement;
   filename: string;
@@ -20,11 +18,17 @@ export async function downloadResumePdf(options: {
     onclone: (_doc, cloned) => {
       cloned.style.aspectRatio = "auto";
       cloned.style.height = "auto";
-      cloned.style.minHeight = "297mm";
-      cloned.style.width = "210mm";
-      cloned.style.maxWidth = "210mm";
+      cloned.style.minHeight = `${A4_HEIGHT_MM}mm`;
+      cloned.style.width = `${A4_WIDTH_MM}mm`;
+      cloned.style.maxWidth = `${A4_WIDTH_MM}mm`;
       cloned.style.borderRadius = "0";
       cloned.style.boxShadow = "none";
+      cloned.style.position = "static";
+      cloned.style.left = "auto";
+      cloned.style.top = "auto";
+      cloned.style.opacity = "1";
+      cloned.style.pointerEvents = "auto";
+      cloned.style.overflow = "visible";
     },
   });
 

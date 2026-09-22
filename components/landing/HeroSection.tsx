@@ -9,7 +9,7 @@ export function HeroSection() {
       <div className="mx-auto grid max-w-content items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <div>
           <h1 className="text-[36px] font-bold leading-[1.15] tracking-tight text-landing-ink md:text-[48px] lg:text-[52px]">
-            一份简历，无限定制变体。
+            一份简历，多个变体。
           </h1>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-landing-muted md:text-[16px]">
             针对不同岗位 JD，一键生成定制版简历变体。结构化板块库 +

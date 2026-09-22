@@ -6,9 +6,7 @@ import {
   type DateDisplayFormat,
 } from "@/lib/resume/date-display";
 import { CustomSelect } from "./CustomSelect";
-
-const monthClass =
-  "h-10 min-w-0 flex-1 rounded-xl border border-ink-soft/10 bg-white px-3 text-[13px] text-ink-soft outline-none transition-colors focus:border-ink-soft/20 focus:text-ink focus:ring-2 focus:ring-ink/5 [color-scheme:light]";
+import { MonthPicker } from "./MonthPicker";
 
 export function SelectField({
   label,
@@ -61,19 +59,17 @@ export function DateRangeField({
         {label}
       </span>
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="month"
+        <MonthPicker
           value={/^\d{4}-\d{2}$/.test(startValue) ? startValue : ""}
-          onChange={(e) => onChange(e.target.value, endDate)}
-          className={monthClass}
+          onChange={(v) => onChange(v, endDate)}
+          ariaLabel={`${label}开始`}
         />
         <span className="shrink-0 text-[12px] text-ink-muted">至</span>
-        <input
-          type="month"
+        <MonthPicker
           value={/^\d{4}-\d{2}$/.test(endValue) ? endValue : ""}
-          onChange={(e) => onChange(startDate, e.target.value)}
+          onChange={(v) => onChange(startDate, v)}
           disabled={isPresent}
-          className={monthClass}
+          ariaLabel={`${label}结束`}
         />
         <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[12px] text-ink-soft">
           <input

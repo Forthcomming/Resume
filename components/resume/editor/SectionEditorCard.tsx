@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
-import { Sparkles, GripVertical } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, ChevronUp, ChevronDown } from "lucide-react";
 import clsx from "clsx";
 import type { EditorSection } from "./sections";
 import { SectionForm } from "./forms/SectionForms";
@@ -34,13 +34,10 @@ interface SectionEditorCardProps {
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
   dateDisplayFormat?: DateDisplayFormat;
   onDateDisplayFormatChange?: (format: DateDisplayFormat) => void;
-  reorderable?: boolean;
-  isDragging?: boolean;
-  isDragOver?: boolean;
-  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
-  onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
-  onDrop?: (event: DragEvent<HTMLDivElement>) => void;
-  onDragEnd?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 export function SectionEditorCard({
@@ -64,13 +61,10 @@ export function SectionEditorCard({
   onToggleBulletAI,
   dateDisplayFormat,
   onDateDisplayFormatChange,
-  reorderable = false,
-  isDragging = false,
-  isDragOver = false,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
 }: SectionEditorCardProps) {
   const Icon = section.icon;
   const sectionAiEnabled = section.id === "summary";
@@ -79,41 +73,30 @@ export function SectionEditorCard({
     pendingAIEdit?.target.scope === "section" &&
     pendingAIEdit.target.sectionId === section.id;
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
-  const [dragEnabled, setDragEnabled] = useState(false);
 
   return (
-    <div
-      draggable={reorderable && dragEnabled}
-      onDragStart={reorderable ? onDragStart : undefined}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={() => {
-        setDragEnabled(false);
-        onDragEnd?.();
-      }}
-      className={clsx(
-        "glass-panel overflow-hidden rounded-[18px] transition-all",
-        isDragging && "opacity-40 scale-[0.99]",
-        isDragOver
-          ? "border-ink/25 shadow-card-hover ring-2 ring-ink/10"
-          : ""
-      )}
-    >
+    <div className="glass-panel overflow-hidden rounded-[18px] transition-all">
       <div className="flex flex-wrap items-center gap-2.5 border-b border-fog-soft/80 px-5 py-3.5">
-        {reorderable ? (
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
-            aria-label="拖动排序"
-            className="flex h-8 w-8 cursor-grab items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-fog-soft hover:text-ink active:cursor-grabbing"
-            onMouseDown={() => setDragEnabled(true)}
-            onMouseUp={() => setDragEnabled(false)}
-            onMouseLeave={() => {
-              if (!isDragging) setDragEnabled(false);
-            }}
+            aria-label="上移"
+            disabled={!canMoveUp}
+            onClick={onMoveUp}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-fog-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted"
           >
-            <GripVertical size={16} strokeWidth={2} />
+            <ChevronUp size={16} strokeWidth={2} />
           </button>
-        ) : null}
+          <button
+            type="button"
+            aria-label="下移"
+            disabled={!canMoveDown}
+            onClick={onMoveDown}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-ink-muted transition-colors hover:bg-fog-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted"
+          >
+            <ChevronDown size={16} strokeWidth={2} />
+          </button>
+        </div>
 
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-fog-soft text-ink-soft">
           <Icon size={15} strokeWidth={2} />

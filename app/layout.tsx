@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Noto_Sans_SC, Outfit } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-outfit",
   display: "swap",
 });
 
-const playfair = Playfair_Display({
+const notoSans = Noto_Sans_SC({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-serif",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto",
   display: "swap",
 });
 
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="zh-CN" className={`${outfit.variable} ${notoSans.variable}`}>
       <body className="font-sans">{children}</body>
     </html>
   );

@@ -100,8 +100,6 @@ export function ResumeEditor({
     bulletIndex: number;
   } | null>(null);
   const [pendingAIEdit, setPendingAIEdit] = useState<PendingAIEdit | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const skipNextSave = useRef(true);
   const initialized = useRef(false);
 
@@ -317,17 +315,13 @@ export function ResumeEditor({
     [updateStore]
   );
 
-  const handleReorder = useCallback(
-    (fromId: string, toId: string) => {
-      if (fromId === toId || fromId === "basic_info" || toId === "basic_info") {
-        return;
-      }
+  const handleMoveSection = useCallback(
+    (sectionId: SectionId, direction: -1 | 1) => {
       updateStore((s) => {
         const order = getSectionOrder(s);
-        const fromIndex = order.indexOf(fromId as SectionId);
-        const toIndex = order.indexOf(toId as SectionId);
-        if (fromIndex < 0 || toIndex < 0) return s;
-        return reorderSections(s, fromIndex, toIndex);
+        const fromIndex = order.indexOf(sectionId);
+        if (fromIndex < 0) return s;
+        return reorderSections(s, fromIndex, fromIndex + direction);
       });
     },
     [updateStore]
@@ -504,7 +498,7 @@ export function ResumeEditor({
   const handleExportPdf = useCallback(async () => {
     if (exportingPdf) return;
     const root = document.querySelector(
-      ".resume-print-root"
+      "[data-resume-pdf-root]"
     ) as HTMLElement | null;
     if (!root) return;
 
@@ -567,11 +561,10 @@ export function ResumeEditor({
       <div className="flex min-h-0 flex-1">
         <div className="glass-surface no-print flex w-1/2 min-w-0 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-auto p-5">
-            {orderedSections.map((section) => {
+            {orderedSections.map((section, index) => {
               const sectionId = section.id as SectionId;
               const bulletOpenForSection =
                 bulletAIOpen?.sectionId === section.id ? bulletAIOpen : null;
-              const reorderable = sectionId !== "basic_info";
 
               return (
                 <SectionEditorCard
@@ -643,40 +636,23 @@ export function ResumeEditor({
                   }}
                   dateDisplayFormat={dateDisplayFormat}
                   onDateDisplayFormatChange={handleDateDisplayFormatChange}
-                  reorderable={reorderable}
-                  isDragging={draggingId === section.id}
-                  isDragOver={dragOverId === section.id && draggingId !== section.id}
-                  onDragStart={(event) => {
-                    setDraggingId(section.id);
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", section.id);
-                  }}
-                  onDragOver={(event) => {
-                    if (!reorderable || !draggingId || draggingId === section.id) {
-                      return;
-                    }
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                    setDragOverId(section.id);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const fromId =
-                      event.dataTransfer.getData("text/plain") || draggingId;
-                    if (fromId) handleReorder(fromId, section.id);
-                    setDraggingId(null);
-                    setDragOverId(null);
-                  }}
-                  onDragEnd={() => {
-                    setDraggingId(null);
-                    setDragOverId(null);
-                  }}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < orderedSections.length - 1}
+                  onMoveUp={() => handleMoveSection(sectionId, -1)}
+                  onMoveDown={() => handleMoveSection(sectionId, 1)}
                 />
               );
             })}
           </div>
 
-          <JDPanel />
+          <JDPanel
+            content={composedContent}
+            onOptimize={(sectionId, instruction) => {
+              setBulletAIOpen(null);
+              setAiOpenSections({ [sectionId]: true });
+              void runAIEdit({ scope: "section", sectionId }, instruction);
+            }}
+          />
         </div>
 
         <div className="w-1/2 min-w-0 overflow-auto px-8 py-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CloudUpload, User } from "lucide-react";
 import {
   TextField,
@@ -17,6 +17,7 @@ import {
   STUDY_TYPE_OPTIONS,
 } from "@/lib/resume/education-options";
 import type { DateDisplayFormat } from "@/lib/resume/date-display";
+import { reorderList } from "@/lib/resume/reorder";
 import {
   emptyEducationEntry,
   emptyWorkEntry,
@@ -380,16 +381,50 @@ function WorkExperienceForm({
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
 }) {
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const update = (i: number, patch: Partial<WorkExperienceContent["entries"][number]>) =>
     onChange({
       entries: value.entries.map((e, idx) => (idx === i ? { ...e, ...patch } : e)),
     });
+
+  const handleReorder = (from: number, to: number) => {
+    onChange({ entries: reorderList(value.entries, from, to) });
+  };
+
   return (
     <div className="space-y-3">
       {value.entries.map((e, i) => (
         <EntryCard
           key={i}
           label={`工作经历 ${i + 1}`}
+          reorderable
+          isDragging={draggingIndex === i}
+          isDragOver={dragOverIndex === i && draggingIndex !== i}
+          onDragStart={(event) => {
+            setDraggingIndex(i);
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", String(i));
+          }}
+          onDragOver={(event) => {
+            if (draggingIndex === null || draggingIndex === i) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            setDragOverIndex(i);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const raw = event.dataTransfer.getData("text/plain");
+            const from = raw !== "" ? Number(raw) : draggingIndex;
+            if (from !== null && !Number.isNaN(from)) handleReorder(from, i);
+            setDraggingIndex(null);
+            setDragOverIndex(null);
+          }}
+          onDragEnd={() => {
+            setDraggingIndex(null);
+            setDragOverIndex(null);
+          }}
           onRemove={() =>
             onChange({ entries: value.entries.filter((_, idx) => idx !== i) })
           }
@@ -443,16 +478,50 @@ function ProjectForm({
   bulletAIOpen?: { entryIndex: number; bulletIndex: number } | null;
   onToggleBulletAI?: (entryIndex: number, bulletIndex: number) => void;
 }) {
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const update = (i: number, patch: Partial<ProjectContent["entries"][number]>) =>
     onChange({
       entries: value.entries.map((e, idx) => (idx === i ? { ...e, ...patch } : e)),
     });
+
+  const handleReorder = (from: number, to: number) => {
+    onChange({ entries: reorderList(value.entries, from, to) });
+  };
+
   return (
     <div className="space-y-3">
       {value.entries.map((e, i) => (
         <EntryCard
           key={i}
           label={`项目经历 ${i + 1}`}
+          reorderable
+          isDragging={draggingIndex === i}
+          isDragOver={dragOverIndex === i && draggingIndex !== i}
+          onDragStart={(event) => {
+            setDraggingIndex(i);
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", String(i));
+          }}
+          onDragOver={(event) => {
+            if (draggingIndex === null || draggingIndex === i) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            setDragOverIndex(i);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const raw = event.dataTransfer.getData("text/plain");
+            const from = raw !== "" ? Number(raw) : draggingIndex;
+            if (from !== null && !Number.isNaN(from)) handleReorder(from, i);
+            setDraggingIndex(null);
+            setDragOverIndex(null);
+          }}
+          onDragEnd={() => {
+            setDraggingIndex(null);
+            setDragOverIndex(null);
+          }}
           onRemove={() =>
             onChange({ entries: value.entries.filter((_, idx) => idx !== i) })
           }

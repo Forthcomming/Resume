@@ -1,4 +1,8 @@
+"use client";
+
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ResumeContent } from "@/lib/resume/content";
+import { A4_HEIGHT_CSS, A4_WIDTH_CSS } from "@/lib/resume/a4";
 import {
   DEFAULT_DATE_DISPLAY_FORMAT,
   formatDateRange,
@@ -9,16 +13,16 @@ import {
   resumeDensityCssVars,
   type ResumeDensity,
 } from "@/lib/resume/density";
-import type { BodySectionId, SectionId } from "@/lib/resume/versions";
+import type { SectionId } from "@/lib/resume/versions";
 import {
   DEFAULT_SECTION_LABELS,
-  REORDERABLE_SECTION_IDS,
+  SECTION_IDS,
 } from "@/lib/resume/versions";
 
 interface ResumePreviewProps {
   title: string;
   content: ResumeContent;
-  /** Body section order (basic_info always renders as header). */
+  /** Full section order including basic_info. */
   sectionOrder?: SectionId[];
   sectionTitles?: Partial<Record<SectionId, string>>;
   dateDisplayFormat?: DateDisplayFormat;
@@ -307,13 +311,42 @@ function SkillsBlock({
   );
 }
 
+function BasicInfoHeader({
+  basic_info,
+  title,
+}: {
+  basic_info: ResumeContent["basic_info"];
+  title: string;
+}) {
+  return (
+    <header>
+      <div className="flex items-start gap-4">
+        {basic_info.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={basic_info.avatar}
+            alt=""
+            className="h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] shrink-0 rounded-md object-cover"
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight">
+            {basic_info.name || "你的姓名"}
+          </h1>
+          <BasicInfoPreviewLines basic_info={basic_info} title={title} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function BodySection({
   sectionId,
   content,
   sectionTitles,
   dateDisplayFormat,
 }: {
-  sectionId: BodySectionId;
+  sectionId: Exclude<SectionId, "basic_info">;
   content: ResumeContent;
   sectionTitles?: Partial<Record<SectionId, string>>;
   dateDisplayFormat: DateDisplayFormat;
@@ -362,16 +395,24 @@ export function ResumePreview({
   density = DEFAULT_RESUME_DENSITY,
 }: ResumePreviewProps) {
   const { basic_info, summary, work, education, project, skills } = content;
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(1);
+  const [pageHeightPx, setPageHeightPx] = useState(0);
 
-  const bodyOrder = (sectionOrder ?? REORDERABLE_SECTION_IDS).filter(
-    (id): id is BodySectionId =>
-      id !== "basic_info" &&
-      (REORDERABLE_SECTION_IDS as readonly string[]).includes(id)
-  );
-  const orderedBody: BodySectionId[] = [
-    ...bodyOrder,
-    ...REORDERABLE_SECTION_IDS.filter((id) => !bodyOrder.includes(id)),
-  ];
+  const ordered = useMemo(() => {
+    const seen = new Set<SectionId>();
+    const next: SectionId[] = [];
+    for (const id of sectionOrder ?? SECTION_IDS) {
+      if ((SECTION_IDS as readonly string[]).includes(id) && !seen.has(id)) {
+        seen.add(id);
+        next.push(id);
+      }
+    }
+    for (const id of SECTION_IDS) {
+      if (!seen.has(id)) next.push(id);
+    }
+    return next;
+  }, [sectionOrder]);
 
   const hasAnyBody =
     summary.text.trim() ||
@@ -382,54 +423,101 @@ export function ResumePreview({
 
   const densityVars = resumeDensityCssVars(density);
 
+  const sheetStyle = {
+    fontFamily:
+      "var(--font-noto), var(--font-outfit), system-ui, sans-serif" as const,
+    width: A4_WIDTH_CSS,
+    ...densityVars,
+  };
+
+  const body = (
+    <div className="flex flex-col gap-[var(--resume-section-gap)]">
+      {ordered.map((sectionId) =>
+        sectionId === "basic_info" ? (
+          <BasicInfoHeader
+            key={sectionId}
+            basic_info={basic_info}
+            title={title}
+          />
+        ) : (
+          <BodySection
+            key={sectionId}
+            sectionId={sectionId}
+            content={content}
+            sectionTitles={sectionTitles}
+            dateDisplayFormat={dateDisplayFormat}
+          />
+        )
+      )}
+
+      {!hasAnyBody && (
+        <p className="text-[length:var(--resume-body-size)] italic text-[#bbb]">
+          在左侧填写内容后将在此处实时预览
+        </p>
+      )}
+    </div>
+  );
+
+  useLayoutEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const probe = el.parentElement?.querySelector(
+        "[data-a4-page-probe]"
+      ) as HTMLElement | null;
+      const pageH = probe?.getBoundingClientRect().height || 1;
+      setPageHeightPx(pageH);
+      setPageCount(Math.max(1, Math.ceil(el.scrollHeight / pageH - 1e-6)));
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ordered, content, title, sectionTitles, dateDisplayFormat, density]);
+
   return (
-    <div className="resume-print-wrapper flex justify-center py-8">
-      <div className="w-full max-w-[680px] shrink-0">
+    <div className="resume-print-wrapper relative flex flex-col items-center gap-6 py-8">
+      {/* Off-screen full document: measure + PDF export source. */}
+      <div className="pointer-events-none fixed -left-[200vw] top-0" aria-hidden>
         <div
-          className="resume-print-root aspect-[210/297] w-full rounded-[4px] bg-white px-[var(--resume-pad-x)] py-[var(--resume-pad-y)] text-[#111] shadow-[0_16px_48px_rgba(15,25,36,0.12),0_4px_12px_rgba(15,25,36,0.06)] ring-1 ring-white/80"
-          style={{
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            ...densityVars,
-          }}
+          data-a4-page-probe
+          style={{ width: A4_WIDTH_CSS, height: A4_HEIGHT_CSS }}
+        />
+        <div
+          ref={measureRef}
+          data-resume-pdf-root
+          className="resume-print-root bg-white px-[var(--resume-pad-x)] py-[var(--resume-pad-y)] text-[#111]"
+          style={sheetStyle}
         >
-          <header>
-            <div className="flex items-start gap-4">
-              {basic_info.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={basic_info.avatar}
-                  alt=""
-                  className="h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] shrink-0 rounded-md object-cover"
-                />
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <h1 className="text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight">
-                  {basic_info.name || "你的姓名"}
-                </h1>
-                <BasicInfoPreviewLines basic_info={basic_info} title={title} />
-              </div>
-            </div>
-          </header>
-
-          <div className="mt-[var(--resume-body-mt)] flex flex-col gap-[var(--resume-section-gap)]">
-            {orderedBody.map((sectionId) => (
-              <BodySection
-                key={sectionId}
-                sectionId={sectionId}
-                content={content}
-                sectionTitles={sectionTitles}
-                dateDisplayFormat={dateDisplayFormat}
-              />
-            ))}
-
-            {!hasAnyBody && (
-              <p className="text-[length:var(--resume-body-size)] italic text-[#bbb]">
-                在左侧填写内容后将在此处实时预览
-              </p>
-            )}
-          </div>
+          {body}
         </div>
       </div>
+
+      {Array.from({ length: pageCount }, (_, pageIndex) => (
+        <div
+          key={pageIndex}
+          className="relative shrink-0 overflow-hidden rounded-[4px] bg-white shadow-[0_16px_48px_rgba(15,25,36,0.12),0_4px_12px_rgba(15,25,36,0.06)] ring-1 ring-white/80"
+          style={{
+            width: A4_WIDTH_CSS,
+            height: A4_HEIGHT_CSS,
+          }}
+        >
+          <div
+            className="px-[var(--resume-pad-x)] py-[var(--resume-pad-y)] text-[#111]"
+            style={{
+              ...sheetStyle,
+              transform:
+                pageHeightPx > 0
+                  ? `translateY(-${pageIndex * pageHeightPx}px)`
+                  : undefined,
+            }}
+          >
+            {body}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

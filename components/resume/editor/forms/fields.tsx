@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, X, Sparkles } from "lucide-react";
+import { Plus, Trash2, X, Sparkles, GripVertical } from "lucide-react";
 import { useState } from "react";
 import clsx from "clsx";
 
@@ -72,15 +72,61 @@ export function EntryCard({
   label,
   onRemove,
   children,
+  reorderable = false,
+  isDragging = false,
+  isDragOver = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   label: string;
   onRemove: () => void;
   children: React.ReactNode;
+  reorderable?: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
 }) {
+  const [dragEnabled, setDragEnabled] = useState(false);
+
   return (
-    <div className="rounded-2xl border border-ink-soft/10 bg-fog-soft/40 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[12px] font-medium text-ink-soft">{label}</span>
+    <div
+      draggable={reorderable && dragEnabled}
+      onDragStart={reorderable ? onDragStart : undefined}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={() => {
+        setDragEnabled(false);
+        onDragEnd?.();
+      }}
+      className={clsx(
+        "rounded-2xl border border-ink-soft/10 bg-fog-soft/40 p-4 transition-all",
+        isDragging && "opacity-40 scale-[0.99]",
+        isDragOver && "border-ink/25 ring-2 ring-ink/10"
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {reorderable ? (
+            <button
+              type="button"
+              aria-label="拖动排序"
+              className="flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-white hover:text-ink active:cursor-grabbing"
+              onMouseDown={() => setDragEnabled(true)}
+              onMouseUp={() => setDragEnabled(false)}
+              onMouseLeave={() => {
+                if (!isDragging) setDragEnabled(false);
+              }}
+            >
+              <GripVertical size={14} strokeWidth={2} />
+            </button>
+          ) : null}
+          <span className="text-[12px] font-medium text-ink-soft">{label}</span>
+        </div>
         <button
           type="button"
           onClick={onRemove}

@@ -13,7 +13,7 @@ body {
 }
 
 body {
-  color: #0f1924;
+  color: #1a2430;
   background-color: var(--background);
   /* Vyra fog: layered cool-blue light for glass surfaces */
   background-image:
@@ -96,9 +96,20 @@ body {
     width: 100% !important;
   }
 
-  .resume-print-wrapper > div {
-    max-width: none !important;
-    width: 100% !important;
+  /* Reveal off-screen export root; hide clipped preview page frames. */
+  .resume-print-wrapper > div.fixed {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    pointer-events: auto !important;
+  }
+
+  .resume-print-wrapper [data-a4-page-probe] {
+    display: none !important;
+  }
+
+  .resume-print-wrapper > div:not(.fixed) {
+    display: none !important;
   }
 
   .resume-print-root {

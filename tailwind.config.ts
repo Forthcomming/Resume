@@ -15,7 +15,7 @@ const config: Config = {
           soft: "#DFE8F0",
         },
         ink: {
-          DEFAULT: "#0F1924", // primary text
+          DEFAULT: "#1A2430", // primary text
           soft: "#3D5A7A", // secondary text
           muted: "#6B87A8", // helper text
         },
@@ -36,7 +36,7 @@ const config: Config = {
         // landing page tokens (scoped; do not affect app UI)
         landing: {
           bg: "#F4F7FA",
-          ink: "#1E293B",
+          ink: "#1A2430",
           muted: "#64748B",
           cta: "#0F1924",
           "accent-blue": "#60A5FA",
@@ -46,8 +46,12 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "Georgia", "'Playfair Display'", "serif"],
+        sans: [
+          "var(--font-outfit)",
+          "var(--font-noto)",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       borderRadius: {
         pill: "4px",

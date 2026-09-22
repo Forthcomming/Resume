@@ -45,7 +45,7 @@ function OptionCard({ icon: Icon, title, description, onClick }: OptionCardProps
     <button
       type="button"
       onClick={onClick}
-      className="glass-panel group flex flex-col rounded-card p-5 text-left shadow-glass transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-glass-hover active:translate-y-0"
+      className="solid-panel flex flex-col rounded-card p-5 text-left transition-shadow hover:shadow-card-hover"
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-landing-cta/10 text-landing-cta">
         <Icon size={18} strokeWidth={2} />
@@ -204,7 +204,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
 
         {step === "choose" && (
           <>
-            <h2 className="font-serif text-[20px] font-semibold tracking-tight text-ink">
+            <h2 className="text-[20px] font-semibold tracking-tight text-ink">
               开始新的简历
             </h2>
             <p className="mt-1.5 text-[13px] text-ink-muted">
@@ -239,7 +239,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
               >
                 <ChevronLeft size={18} strokeWidth={2} />
               </button>
-              <h2 className="font-serif text-[20px] font-semibold tracking-tight text-ink">
+              <h2 className="text-[20px] font-semibold tracking-tight text-ink">
                 上传已有简历
               </h2>
             </div>
@@ -308,7 +308,7 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
               >
                 <ChevronLeft size={18} strokeWidth={2} />
               </button>
-              <h2 className="font-serif text-[20px] font-semibold tracking-tight text-ink">
+              <h2 className="text-[20px] font-semibold tracking-tight text-ink">
                 从零创建
               </h2>
             </div>

@@ -26,9 +26,7 @@ const SECTION_SCHEMA_HINTS: Record<string, string> = {
 };
 
 function buildSystemPrompt(target: EditTarget): string {
-  const sectionId =
-    target.scope === "field" ? target.sectionId : target.sectionId;
-  const schema = SECTION_SCHEMA_HINTS[sectionId] ?? "与输入相同结构";
+  const schema = SECTION_SCHEMA_HINTS[target.sectionId] ?? "与输入相同结构";
 
   let scopeHint = "";
   if (target.scope === "bullet") {

@@ -73,7 +73,7 @@ export function EditorTopBar({
               setEditing(false);
             }
           }}
-          className="glass-control h-8 min-w-0 max-w-[280px] flex-1 rounded-full px-3 text-[15px] font-medium tracking-tight text-ink outline-none focus:border-ink-soft/25 focus:ring-2 focus:ring-ink/5"
+          className="solid-control h-8 min-w-0 max-w-[280px] flex-1 rounded-lg px-3 text-[15px] font-medium tracking-tight text-ink outline-none focus:ring-2 focus:ring-landing-cta/15"
           aria-label="简历标题"
         />
       ) : (

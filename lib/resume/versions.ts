@@ -14,6 +14,7 @@ import {
   isResumeDensity,
   type ResumeDensity,
 } from "@/lib/resume/density";
+import { reorderList } from "@/lib/resume/reorder";
 
 export type SectionId = keyof ResumeContent;
 
@@ -35,7 +36,7 @@ export interface SectionBucket<T = unknown> {
 
 export interface SectionSubVersionsStore {
   schemaVersion: 1;
-  /** Display order of sections in editor + preview body (basic_info always first). */
+  /** Display order of sections in editor + preview (all sections, including basic_info). */
   sectionOrder: SectionId[];
   /** Custom display labels per section (editor + PDF preview). */
   sectionTitles: Partial<Record<SectionId, string>>;
@@ -204,7 +205,7 @@ function emptyBucket<K extends SectionId>(
 
 export type BodySectionId = Exclude<SectionId, "basic_info">;
 
-/** Body sections that can be reordered (basic_info stays as resume header). */
+/** Non-header body section ids (preview helpers). */
 export const REORDERABLE_SECTION_IDS: BodySectionId[] = [
   "summary",
   "work",
@@ -217,27 +218,24 @@ export function defaultSectionOrder(): SectionId[] {
   return [...SECTION_IDS];
 }
 
-/** Ensure basic_info is first and every section id appears exactly once. */
+/** Every section id exactly once; preserve given order, append missing in default order. */
 export function sanitizeSectionOrder(order?: SectionId[]): SectionId[] {
-  const seen = new Set<BodySectionId>();
-  const body: BodySectionId[] = [];
+  const allowed = new Set<string>(SECTION_IDS);
+  const seen = new Set<SectionId>();
+  const next: SectionId[] = [];
 
   for (const id of order ?? []) {
-    if (id === "basic_info") continue;
-    if (
-      (REORDERABLE_SECTION_IDS as readonly string[]).includes(id) &&
-      !seen.has(id as BodySectionId)
-    ) {
-      seen.add(id as BodySectionId);
-      body.push(id as BodySectionId);
+    if (allowed.has(id) && !seen.has(id)) {
+      seen.add(id);
+      next.push(id);
     }
   }
 
-  for (const id of REORDERABLE_SECTION_IDS) {
-    if (!seen.has(id)) body.push(id);
+  for (const id of SECTION_IDS) {
+    if (!seen.has(id)) next.push(id);
   }
 
-  return ["basic_info", ...body];
+  return next;
 }
 
 export function getSectionOrder(store: SectionSubVersionsStore): SectionId[] {
@@ -251,24 +249,8 @@ export function reorderSections(
   toIndex: number
 ): SectionSubVersionsStore {
   const order = getSectionOrder(store);
-  if (
-    fromIndex === toIndex ||
-    fromIndex < 0 ||
-    toIndex < 0 ||
-    fromIndex >= order.length ||
-    toIndex >= order.length
-  ) {
-    return store;
-  }
-
-  // Keep basic_info pinned at the top.
-  if (order[fromIndex] === "basic_info" || order[toIndex] === "basic_info") {
-    return store;
-  }
-
-  const next = [...order];
-  const [moved] = next.splice(fromIndex, 1);
-  next.splice(toIndex, 0, moved);
+  const next = reorderList(order, fromIndex, toIndex);
+  if (next === order) return store;
   return { ...store, sectionOrder: sanitizeSectionOrder(next) };
 }
 

@@ -44,7 +44,7 @@ export function ApiKeySettingsForm() {
   };
 
   return (
-    <div className="glass-panel rounded-panel p-6">
+    <div className="solid-panel rounded-panel p-6">
       <h2 className="text-[16px] font-semibold text-ink">DeepSeek API Key</h2>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
         用于简历解析与 AI 改写。Key 仅保存在本机浏览器，不会上传到我们的数据库。可在{" "}
