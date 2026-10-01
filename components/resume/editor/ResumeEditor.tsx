@@ -1,56 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EditorTopBar, type SaveState } from "./EditorTopBar";
-import { SectionEditorCard } from "./SectionEditorCard";
-import { ResumePreview } from "./ResumePreview";
+import { useCallback, useMemo, useState } from "react";
+import { AIModal } from "./AIModal";
+import { EditorTopBar } from "./EditorTopBar";
 import { JDPanel } from "./JDPanel";
+import { ResumePreview } from "./ResumePreview";
+import { SectionEditorCard } from "./SectionEditorCard";
+import { useResumeAIEdit } from "./hooks/useResumeAIEdit";
+import { useResumePersistence } from "./hooks/useResumePersistence";
+import { useResumeVersions } from "./hooks/useResumeVersions";
 import { getEditorSectionsInOrder } from "./sections";
-import { saveResumeWorkspaceAction, updateResumeTitleAction } from "@/app/resume/[id]/actions";
+import type { ResumeContent } from "@/lib/resume/content";
 import {
-  emptyResumeContent,
-  normalizeResumeContent,
-  type ResumeContent,
-} from "@/lib/resume/content";
-import {
-  readLocalResumeIndex,
-  resumeContentKey,
-  saveLocalResumeContent,
-  touchLocalResumeUpdated,
-  upsertLocalResume,
-} from "@/lib/resume/local-storage";
-import {
-  composeFromSectionSubVersions,
-  addSectionSubVersion,
-  duplicateSectionSubVersion,
-  deleteSectionSubVersion,
-  getActiveSectionContent,
-  getActiveSectionVersionId,
-  getSectionOrder,
-  getSectionVersions,
-  getSectionDisplayTitle,
-  setSectionDisplayTitle,
-  getDateDisplayFormat,
-  setDateDisplayFormat,
   DEFAULT_SECTION_LABELS,
-  initSectionSubVersionsStore,
-  readSectionSubVersionsStore,
-  renameSectionSubVersion,
-  reorderSections,
-  saveSectionSubVersionsStore,
-  setActiveSectionVersion,
-  updateActiveSectionContent,
   type SectionId,
   type SectionSubVersionsStore,
 } from "@/lib/resume/versions";
-import { applyAIEdit, getEditSlice, requestAIEdit } from "@/lib/ai/client-edit";
-import {
-  aiPromptPlaceholder,
-  describeAIEditTarget,
-} from "@/lib/ai/describe-target";
-import type { EditTarget, PendingAIEdit } from "@/types/ai-edit";
-import type { DateDisplayFormat } from "@/lib/resume/date-display";
-import { AIModal } from "./AIModal";
 
 interface ResumeEditorProps {
   id: string;
@@ -60,26 +25,6 @@ interface ResumeEditorProps {
   serverUpdatedAt?: string | null;
 }
 
-const storageKey = resumeContentKey;
-
-function isLocalNewer(
-  localUpdatedAt: string | null | undefined,
-  serverUpdatedAt: string | null | undefined
-): boolean {
-  if (!localUpdatedAt) return false;
-  if (!serverUpdatedAt) return true;
-  return new Date(localUpdatedAt).getTime() > new Date(serverUpdatedAt).getTime();
-}
-
-function persistLocalDraft(resumeId: string, content: ResumeContent): void {
-  try {
-    saveLocalResumeContent(resumeId, content);
-    touchLocalResumeUpdated(resumeId);
-  } catch {
-    /* ignore quota errors */
-  }
-}
-
 export function ResumeEditor({
   id,
   title,
@@ -87,398 +32,23 @@ export function ResumeEditor({
   initialVersionStore = null,
   serverUpdatedAt = null,
 }: ResumeEditorProps) {
-  const [store, setStore] = useState<SectionSubVersionsStore | null>(null);
-  const [resumeTitle, setResumeTitle] = useState(title);
-  const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [aiOpenSections, setAiOpenSections] = useState<Record<string, boolean>>({});
-  const [bulletAIOpen, setBulletAIOpen] = useState<{
-    sectionId: "work" | "project" | "education";
-    entryIndex: number;
-    bulletIndex: number;
-  } | null>(null);
-  const [pendingAIEdit, setPendingAIEdit] = useState<PendingAIEdit | null>(null);
-  const skipNextSave = useRef(true);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    setResumeTitle(title);
-  }, [title]);
-
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    let baseContent = initialContent ?? emptyResumeContent();
-    if (!initialContent) {
-      try {
-        const raw = localStorage.getItem(storageKey(id));
-        if (raw) baseContent = normalizeResumeContent(JSON.parse(raw));
-      } catch {
-        /* ignore malformed cache */
-      }
-    }
-
-    const localStore = readSectionSubVersionsStore(id);
-    const localUpdatedAt =
-      readLocalResumeIndex().find((e) => e.id === id)?.updatedAt ?? null;
-
-    if (
-      initialVersionStore &&
-      localStore &&
-      isLocalNewer(localUpdatedAt, serverUpdatedAt)
-    ) {
-      setStore(localStore);
-      void saveResumeWorkspaceAction(
-        id,
-        composeFromSectionSubVersions(localStore),
-        localStore
-      );
-      return;
-    }
-
-    if (initialVersionStore) {
-      setStore(initialVersionStore);
-      saveSectionSubVersionsStore(id, initialVersionStore);
-      return;
-    }
-
-    if (localStore) {
-      setStore(localStore);
-      if (serverUpdatedAt !== null || initialContent) {
-        void saveResumeWorkspaceAction(
-          id,
-          composeFromSectionSubVersions(localStore),
-          localStore
-        );
-      }
-      return;
-    }
-
-    const next = initSectionSubVersionsStore(baseContent);
-    setStore(next);
-    saveSectionSubVersionsStore(id, next);
-    // Legacy cloud rows may only have flat content — backfill version_store.
-    if (initialContent && !initialVersionStore) {
-      void saveResumeWorkspaceAction(id, composeFromSectionSubVersions(next), next);
-    }
-  }, [id, initialContent, initialVersionStore, serverUpdatedAt]);
-
-  const composedContent = useMemo(
-    () => (store ? composeFromSectionSubVersions(store) : emptyResumeContent()),
-    [store]
-  );
-
-  const sectionOrder = useMemo(
-    () => (store ? getSectionOrder(store) : []),
-    [store]
-  );
-
+  const persistence = useResumePersistence({
+    id,
+    title,
+    initialContent,
+    initialVersionStore,
+    serverUpdatedAt,
+  });
+  const versions = useResumeVersions(persistence.store, persistence.setStore);
+  const ai = useResumeAIEdit({
+    store: persistence.store,
+    composedContent: versions.composedContent,
+    updateStore: versions.updateStore,
+  });
   const orderedSections = useMemo(
-    () => getEditorSectionsInOrder(sectionOrder),
-    [sectionOrder]
+    () => getEditorSectionsInOrder(versions.sectionOrder),
+    [versions.sectionOrder]
   );
-
-  const dateDisplayFormat: DateDisplayFormat = store
-    ? getDateDisplayFormat(store)
-    : "YYYY.MM";
-
-  const saveNow = useCallback(
-    async (
-      nextStore: SectionSubVersionsStore,
-      content: ResumeContent
-    ): Promise<void> => {
-      setSaveState("saving");
-      saveSectionSubVersionsStore(id, nextStore);
-      try {
-        const res = await saveResumeWorkspaceAction(id, content, nextStore);
-        if (!res.configured) {
-          persistLocalDraft(id, content);
-          setSaveState("saved");
-          return;
-        }
-        if (!res.ok) {
-          persistLocalDraft(id, content);
-          setSaveState("error");
-          return;
-        }
-        try {
-          touchLocalResumeUpdated(id);
-        } catch {
-          /* ignore */
-        }
-        setSaveState("saved");
-      } catch {
-        persistLocalDraft(id, content);
-        setSaveState("error");
-      }
-    },
-    [id]
-  );
-
-  const retrySave = useCallback(() => {
-    if (!store) return;
-    void saveNow(store, composedContent);
-  }, [store, composedContent, saveNow]);
-
-  useEffect(() => {
-    if (!store) return;
-    if (skipNextSave.current) {
-      skipNextSave.current = false;
-      return;
-    }
-    const t = setTimeout(() => {
-      void saveNow(store, composedContent);
-    }, 800);
-    return () => clearTimeout(t);
-  }, [store, composedContent, saveNow]);
-
-  const updateStore = useCallback(
-    (updater: (s: SectionSubVersionsStore) => SectionSubVersionsStore) => {
-      setStore((prev) => (prev ? updater(prev) : prev));
-    },
-    []
-  );
-
-  const handleDateDisplayFormatChange = useCallback(
-    (format: DateDisplayFormat) => {
-      updateStore((s) => setDateDisplayFormat(s, format));
-    },
-    [updateStore]
-  );
-
-  const getSectionCardContent = useCallback(
-    (sectionId: SectionId): ResumeContent => {
-      if (!store) return emptyResumeContent();
-      return {
-        ...composedContent,
-        [sectionId]: getActiveSectionContent(store, sectionId),
-      };
-    },
-    [store, composedContent]
-  );
-
-  const handleSectionChange = useCallback(
-    (sectionId: SectionId, next: ResumeContent) => {
-      updateStore((s) =>
-        updateActiveSectionContent(s, sectionId, next[sectionId])
-      );
-    },
-    [updateStore]
-  );
-
-  const handleActiveVersionChange = useCallback(
-    (sectionId: SectionId, versionId: string) => {
-      updateStore((s) => setActiveSectionVersion(s, sectionId, versionId));
-    },
-    [updateStore]
-  );
-
-  const handleCreateSubVersion = useCallback(
-    (sectionId: SectionId, name: string) => {
-      updateStore((s) => addSectionSubVersion(s, sectionId, name));
-    },
-    [updateStore]
-  );
-
-  const handleRenameSubVersion = useCallback(
-    (sectionId: SectionId, versionId: string, name: string) => {
-      updateStore((s) => renameSectionSubVersion(s, sectionId, versionId, name));
-    },
-    [updateStore]
-  );
-
-  const handleDuplicateSubVersion = useCallback(
-    (sectionId: SectionId, versionId: string) => {
-      updateStore((s) => duplicateSectionSubVersion(s, sectionId, versionId));
-    },
-    [updateStore]
-  );
-
-  const handleDeleteSubVersion = useCallback(
-    (sectionId: SectionId, versionId: string) => {
-      updateStore((s) => deleteSectionSubVersion(s, sectionId, versionId));
-    },
-    [updateStore]
-  );
-
-  const handleMoveSection = useCallback(
-    (sectionId: SectionId, direction: -1 | 1) => {
-      updateStore((s) => {
-        const order = getSectionOrder(s);
-        const fromIndex = order.indexOf(sectionId);
-        if (fromIndex < 0) return s;
-        return reorderSections(s, fromIndex, fromIndex + direction);
-      });
-    },
-    [updateStore]
-  );
-
-  const handleSectionTitleChange = useCallback(
-    (sectionId: SectionId, title: string) => {
-      updateStore((s) => setSectionDisplayTitle(s, sectionId, title));
-    },
-    [updateStore]
-  );
-
-  const runAIEdit = useCallback(
-    async (target: EditTarget, instruction: string) => {
-      if (!store) return;
-      const sectionId = target.sectionId;
-      const slice = getEditSlice(
-        {
-          ...composedContent,
-          [sectionId]: getActiveSectionContent(store, sectionId),
-        },
-        target
-      );
-
-      setPendingAIEdit({
-        target,
-        instruction,
-        original: slice,
-        suggested: null,
-        status: "loading",
-      });
-
-      try {
-        const result = await requestAIEdit(target, slice, instruction);
-        setPendingAIEdit({
-          target,
-          instruction,
-          original: result.original,
-          suggested: result.suggested,
-          status: "ready",
-        });
-      } catch (err) {
-        setPendingAIEdit({
-          target,
-          instruction,
-          original: slice,
-          suggested: null,
-          status: "error",
-          error: err instanceof Error ? err.message : "AI 编辑失败",
-        });
-      }
-    },
-    [store, composedContent]
-  );
-
-  const handleAIAccept = useCallback(() => {
-    if (!pendingAIEdit || !store || pendingAIEdit.status !== "ready") return;
-
-    const { target, suggested } = pendingAIEdit;
-    const sectionId = target.sectionId;
-    const currentSection = {
-      ...emptyResumeContent(),
-      [sectionId]: getActiveSectionContent(store, sectionId),
-    };
-    const updated = applyAIEdit(currentSection, target, suggested);
-
-    updateStore((s) =>
-      updateActiveSectionContent(s, sectionId, updated[sectionId])
-    );
-
-    setPendingAIEdit(null);
-    setAiOpenSections({});
-    setBulletAIOpen(null);
-  }, [pendingAIEdit, store, updateStore]);
-
-  const handleAIReject = useCallback(() => {
-    setPendingAIEdit(null);
-  }, []);
-
-  const handleAIModalClose = useCallback(() => {
-    setPendingAIEdit(null);
-    setAiOpenSections({});
-    setBulletAIOpen(null);
-  }, []);
-
-  const aiModalMeta = useMemo(() => {
-    if (!store) return null;
-
-    let target: EditTarget | null = null;
-
-    if (pendingAIEdit) {
-      target = pendingAIEdit.target;
-    } else if (bulletAIOpen) {
-      target = {
-        scope: "bullet",
-        sectionId: bulletAIOpen.sectionId,
-        entryIndex: bulletAIOpen.entryIndex,
-        bulletIndex: bulletAIOpen.bulletIndex,
-      };
-    } else {
-      const openSectionId = Object.entries(aiOpenSections).find(
-        ([, open]) => open
-      )?.[0] as SectionId | undefined;
-      if (openSectionId) {
-        target = { scope: "section", sectionId: openSectionId };
-      }
-    }
-
-    if (!target) return null;
-
-    const sectionTitle = getSectionDisplayTitle(store, target.sectionId);
-    const { title, subtitle } = describeAIEditTarget(target, sectionTitle);
-    const originalContent =
-      pendingAIEdit?.original ??
-      getEditSlice(
-        {
-          ...composedContent,
-          [target.sectionId]: getActiveSectionContent(store, target.sectionId),
-        },
-        target
-      );
-
-    return {
-      target,
-      title,
-      subtitle,
-      placeholder: aiPromptPlaceholder(target, sectionTitle),
-      originalContent,
-    };
-  }, [store, pendingAIEdit, bulletAIOpen, aiOpenSections, composedContent]);
-
-  const handleSectionAIRequest = useCallback(
-    (sectionId: SectionId, instruction: string) => {
-      runAIEdit({ scope: "section", sectionId }, instruction);
-    },
-    [runAIEdit]
-  );
-
-  const handleBulletAIRequest = useCallback(
-    (
-      sectionId: "work" | "project" | "education",
-      entryIndex: number,
-      bulletIndex: number,
-      instruction: string
-    ) => {
-      runAIEdit({ scope: "bullet", sectionId, entryIndex, bulletIndex }, instruction);
-    },
-    [runAIEdit]
-  );
-
-  const handleAIModalSubmit = useCallback(
-    (instruction: string) => {
-      if (bulletAIOpen) {
-        handleBulletAIRequest(
-          bulletAIOpen.sectionId,
-          bulletAIOpen.entryIndex,
-          bulletAIOpen.bulletIndex,
-          instruction
-        );
-        return;
-      }
-      const openSectionId = Object.entries(aiOpenSections).find(
-        ([, open]) => open
-      )?.[0] as SectionId | undefined;
-      if (openSectionId) {
-        handleSectionAIRequest(openSectionId, instruction);
-      }
-    },
-    [bulletAIOpen, aiOpenSections, handleBulletAIRequest, handleSectionAIRequest]
-  );
-
   const [exportingPdf, setExportingPdf] = useState(false);
 
   const handleExportPdf = useCallback(async () => {
@@ -493,36 +63,17 @@ export function ResumeEditor({
       const { downloadResumePdf } = await import("@/lib/resume/export-pdf");
       await downloadResumePdf({
         element: root,
-        filename: resumeTitle || "resume",
+        filename: persistence.resumeTitle || "resume",
       });
-    } catch (err) {
-      console.error("[export-pdf]", err);
+    } catch (error) {
+      console.error("[export-pdf]", error);
       window.alert("导出 PDF 失败，请稍后重试");
     } finally {
       setExportingPdf(false);
     }
-  }, [exportingPdf, resumeTitle]);
+  }, [exportingPdf, persistence.resumeTitle]);
 
-  const handleResumeTitleChange = useCallback(
-    async (nextTitle: string) => {
-      setResumeTitle(nextTitle);
-      try {
-        upsertLocalResume({ id, title: nextTitle });
-      } catch {
-        /* ignore quota errors */
-      }
-      const res = await updateResumeTitleAction(id, nextTitle);
-      if (!res.configured) {
-        try {
-          touchLocalResumeUpdated(id);
-        } catch {
-          /* ignore */
-        }
-      }
-    },
-    [id]
-  );
-
+  const store = persistence.store;
   if (!store) {
     return (
       <div className="flex h-screen items-center justify-center bg-[radial-gradient(ellipse_at_50%_20%,#eef3fa_0%,#e8eef5_45%,#dce6f2_100%)] text-ink-muted">
@@ -534,12 +85,12 @@ export function ResumeEditor({
   return (
     <div className="flex h-screen flex-col bg-[radial-gradient(ellipse_at_50%_12%,#eef3fa_0%,#e8eef5_42%,#d8e4f0_100%)]">
       <EditorTopBar
-        title={resumeTitle}
-        saveState={saveState}
-        onTitleChange={handleResumeTitleChange}
+        title={persistence.resumeTitle}
+        saveState={persistence.saveState}
+        onTitleChange={persistence.updateResumeTitle}
         onExportPdf={handleExportPdf}
         exportingPdf={exportingPdf}
-        onRetrySave={retrySave}
+        onRetrySave={persistence.retrySave}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -548,46 +99,41 @@ export function ResumeEditor({
             {orderedSections.map((section, index) => {
               const sectionId = section.id as SectionId;
               const bulletOpenForSection =
-                bulletAIOpen?.sectionId === section.id ? bulletAIOpen : null;
+                ai.bulletAIOpen?.sectionId === section.id
+                  ? ai.bulletAIOpen
+                  : null;
 
               return (
                 <SectionEditorCard
                   key={section.id}
                   section={section}
-                  displayTitle={getSectionDisplayTitle(store, sectionId)}
+                  displayTitle={versions.getDisplayTitle(sectionId)}
                   defaultTitle={DEFAULT_SECTION_LABELS[sectionId]}
-                  onTitleChange={(t) => handleSectionTitleChange(sectionId, t)}
-                  content={getSectionCardContent(sectionId)}
-                  onChange={(next) => handleSectionChange(sectionId, next)}
-                  versions={getSectionVersions(store, sectionId)}
-                  activeVersionId={getActiveSectionVersionId(store, sectionId)}
-                  onActiveVersionChange={(vid) =>
-                    handleActiveVersionChange(sectionId, vid)
+                  onTitleChange={(nextTitle) =>
+                    versions.updateSectionTitle(sectionId, nextTitle)
+                  }
+                  content={versions.getSectionCardContent(sectionId)}
+                  onChange={(next) => versions.updateSection(sectionId, next)}
+                  versions={versions.getVersions(sectionId)}
+                  activeVersionId={versions.getActiveVersionId(sectionId)}
+                  onActiveVersionChange={(versionId) =>
+                    versions.setActiveVersion(sectionId, versionId)
                   }
                   onCreateSubVersion={(name) =>
-                    handleCreateSubVersion(sectionId, name)
+                    versions.createVersion(sectionId, name)
                   }
-                  onRenameSubVersion={(vid, name) =>
-                    handleRenameSubVersion(sectionId, vid, name)
+                  onRenameSubVersion={(versionId, name) =>
+                    versions.renameVersion(sectionId, versionId, name)
                   }
-                  onDuplicateSubVersion={(vid) =>
-                    handleDuplicateSubVersion(sectionId, vid)
+                  onDuplicateSubVersion={(versionId) =>
+                    versions.duplicateVersion(sectionId, versionId)
                   }
-                  onDeleteSubVersion={(vid) =>
-                    handleDeleteSubVersion(sectionId, vid)
+                  onDeleteSubVersion={(versionId) =>
+                    versions.deleteVersion(sectionId, versionId)
                   }
-                  aiOpen={!!aiOpenSections[section.id]}
-                  onToggleAI={() =>
-                    setAiOpenSections((prev) => {
-                      const opening = !prev[section.id];
-                      if (opening) {
-                        setBulletAIOpen(null);
-                        setPendingAIEdit(null);
-                      }
-                      return { ...prev, [section.id]: opening };
-                    })
-                  }
-                  pendingAIEdit={pendingAIEdit}
+                  aiOpen={!!ai.aiOpenSections[section.id]}
+                  onToggleAI={() => ai.toggleSectionAI(sectionId)}
+                  pendingAIEdit={ai.pendingAIEdit}
                   bulletAIOpen={
                     bulletOpenForSection
                       ? {
@@ -596,73 +142,56 @@ export function ResumeEditor({
                         }
                       : null
                   }
-                  onToggleBulletAI={(entryIndex, bulletIndex) => {
-                    const isSame =
-                      bulletAIOpen?.sectionId === section.id &&
-                      bulletAIOpen.entryIndex === entryIndex &&
-                      bulletAIOpen.bulletIndex === bulletIndex;
-                    if (!isSame) {
-                      setPendingAIEdit(null);
-                    }
-                    setBulletAIOpen(
-                      isSame
-                        ? null
-                        : {
-                            sectionId: sectionId as "work" | "project" | "education",
-                            entryIndex,
-                            bulletIndex,
-                          }
-                    );
-                    setAiOpenSections((prev) => ({
-                      ...prev,
-                      [section.id]: false,
-                    }));
-                  }}
-                  dateDisplayFormat={dateDisplayFormat}
-                  onDateDisplayFormatChange={handleDateDisplayFormatChange}
+                  onToggleBulletAI={(entryIndex, bulletIndex) =>
+                    ai.toggleBulletAI(
+                      sectionId as "work" | "project" | "education",
+                      entryIndex,
+                      bulletIndex
+                    )
+                  }
+                  dateDisplayFormat={versions.dateDisplayFormat}
+                  onDateDisplayFormatChange={versions.updateDateDisplayFormat}
                   canMoveUp={index > 0}
                   canMoveDown={index < orderedSections.length - 1}
-                  onMoveUp={() => handleMoveSection(sectionId, -1)}
-                  onMoveDown={() => handleMoveSection(sectionId, 1)}
+                  onMoveUp={() => versions.moveSection(sectionId, -1)}
+                  onMoveDown={() => versions.moveSection(sectionId, 1)}
                 />
               );
             })}
           </div>
 
           <JDPanel
-            content={composedContent}
-            onOptimize={(sectionId, instruction) => {
-              setBulletAIOpen(null);
-              setAiOpenSections({ [sectionId]: true });
-              void runAIEdit({ scope: "section", sectionId }, instruction);
-            }}
+            content={versions.composedContent}
+            onOptimize={ai.optimizeSection}
           />
         </div>
 
         <div className="w-1/2 min-w-0 overflow-auto px-8 py-2">
           <ResumePreview
-            title={resumeTitle}
-            content={composedContent}
-            sectionOrder={sectionOrder}
+            title={persistence.resumeTitle}
+            content={versions.composedContent}
+            sectionOrder={versions.sectionOrder}
             sectionTitles={store.sectionTitles}
-            dateDisplayFormat={dateDisplayFormat}
+            dateDisplayFormat={versions.dateDisplayFormat}
           />
         </div>
       </div>
 
       <AIModal
-        open={aiModalMeta !== null}
-        title={aiModalMeta?.title ?? "AI 优化"}
-        subtitle={aiModalMeta?.subtitle}
-        promptPlaceholder={aiModalMeta?.placeholder}
-        target={aiModalMeta?.target ?? { scope: "section", sectionId: "summary" }}
-        originalContent={aiModalMeta?.originalContent ?? ""}
-        pendingAIEdit={pendingAIEdit}
-        onClose={handleAIModalClose}
-        onSubmit={handleAIModalSubmit}
-        onAccept={handleAIAccept}
-        onRetry={handleAIReject}
-        onDismissSuggestion={handleAIModalClose}
+        open={ai.aiModalMeta !== null}
+        title={ai.aiModalMeta?.title ?? "AI 优化"}
+        subtitle={ai.aiModalMeta?.subtitle}
+        promptPlaceholder={ai.aiModalMeta?.placeholder}
+        target={
+          ai.aiModalMeta?.target ?? { scope: "section", sectionId: "summary" }
+        }
+        originalContent={ai.aiModalMeta?.originalContent ?? ""}
+        pendingAIEdit={ai.pendingAIEdit}
+        onClose={ai.closeAIEdit}
+        onSubmit={ai.submitAIEdit}
+        onAccept={ai.acceptAIEdit}
+        onRetry={ai.rejectAIEdit}
+        onDismissSuggestion={ai.closeAIEdit}
       />
     </div>
   );
