@@ -1,6 +1,6 @@
 export type DateDisplayFormat = "YYYY-MM" | "YYYY.MM" | "YYYY年MM月";
 
-export const DEFAULT_DATE_DISPLAY_FORMAT: DateDisplayFormat = "YYYY-MM";
+export const DEFAULT_DATE_DISPLAY_FORMAT: DateDisplayFormat = "YYYY.MM";
 
 export const DATE_DISPLAY_FORMATS: DateDisplayFormat[] = [
   "YYYY.MM",

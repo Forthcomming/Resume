@@ -96,7 +96,7 @@ docs/                      # PRD、设计系统、本架构
 `SectionSubVersionsStore`（见 `lib/resume/versions.ts`）：
 
 - 每板块：`activeVersionId` + `versions[]`
-- 另含 `sectionOrder`、`sectionTitles`、日期格式、密度等编辑偏好
+- 另含 `sectionOrder`、`sectionTitles`、日期格式等编辑偏好（预览为固定校招版式，无密度三档）
 - `content` 为当前激活版本合成快照；旧整份 snapshot 仅迁移用
 
 ## 6. API

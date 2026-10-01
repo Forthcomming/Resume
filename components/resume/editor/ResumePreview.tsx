@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ResumeContent } from "@/lib/resume/content";
 import { A4_HEIGHT_CSS, A4_WIDTH_CSS } from "@/lib/resume/a4";
 import {
@@ -8,11 +8,7 @@ import {
   formatDateRange,
   type DateDisplayFormat,
 } from "@/lib/resume/date-display";
-import {
-  DEFAULT_RESUME_DENSITY,
-  resumeDensityCssVars,
-  type ResumeDensity,
-} from "@/lib/resume/density";
+import { resumeStyleCssVars } from "@/lib/resume/density";
 import type { SectionId } from "@/lib/resume/versions";
 import {
   DEFAULT_SECTION_LABELS,
@@ -26,7 +22,6 @@ interface ResumePreviewProps {
   sectionOrder?: SectionId[];
   sectionTitles?: Partial<Record<SectionId, string>>;
   dateDisplayFormat?: DateDisplayFormat;
-  density?: ResumeDensity;
 }
 
 function resolveSectionTitle(
@@ -63,14 +58,9 @@ function BasicInfoPreviewLines({
   basic_info: ResumeContent["basic_info"];
   title: string;
 }) {
-  const contactLine = [
-    basic_info.email,
-    basic_info.phone,
-    basic_info.birthday,
-    basic_info.location,
-  ]
+  const contactLine = [basic_info.phone, basic_info.email]
     .filter((c) => c.trim())
-    .join("　|　");
+    .join(" | ");
 
   const jobLine = labeledLine([
     { label: "意向城市", value: basic_info.target_cities },
@@ -85,6 +75,8 @@ function BasicInfoPreviewLines({
   ]);
 
   const otherLine = labeledLine([
+    { label: "年龄", value: basic_info.birthday },
+    { label: "所在地", value: basic_info.location },
     { label: "性别", value: basic_info.gender },
     { label: "民族", value: basic_info.ethnicity },
     { label: "籍贯", value: basic_info.native_place },
@@ -100,18 +92,18 @@ function BasicInfoPreviewLines({
   return (
     <>
       {contactLine ? (
-        <p className="mt-[var(--resume-header-gap)] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#444]">
+        <p className="mt-[var(--resume-header-gap)] text-center text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#333]">
           {contactLine}
         </p>
       ) : !hasHeaderInfo ? (
-        <p className="mt-[var(--resume-header-gap)] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#999]">
+        <p className="mt-[var(--resume-header-gap)] text-center text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#999]">
           {title}
         </p>
       ) : null}
       {detailLines.map((line) => (
         <p
           key={line}
-          className="mt-[calc(var(--resume-header-gap)*0.75)] text-[length:var(--resume-meta-size)] leading-[var(--resume-leading)] text-[#555]"
+          className="mt-[calc(var(--resume-header-gap)*0.75)] text-center text-[length:var(--resume-meta-size)] leading-[var(--resume-leading)] text-[#555]"
         >
           {line}
         </p>
@@ -122,7 +114,7 @@ function BasicInfoPreviewLines({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-[var(--resume-section-title-mb)] border-b border-[#111] pb-1 text-[length:var(--resume-section-title-size)] font-bold uppercase tracking-[0.06em]">
+    <h2 className="mb-[var(--resume-section-title-mb)] border-b border-[#111] pb-0.5 text-[length:var(--resume-section-title-size)] font-bold leading-tight text-[#111]">
       {children}
     </h2>
   );
@@ -132,11 +124,36 @@ function Bullets({ items }: { items: string[] }) {
   const visible = items.filter((b) => b.trim());
   if (visible.length === 0) return null;
   return (
-    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
+    <ul className="mt-0.5 list-disc space-y-[0.12rem] pl-[1.1em] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
       {visible.map((b, i) => (
         <li key={i}>{b}</li>
       ))}
     </ul>
+  );
+}
+
+/** Campus three-column meta: left org · center role · right dates. */
+function EntryMetaRow({
+  left,
+  center,
+  right,
+}: {
+  left: ReactNode;
+  center?: ReactNode;
+  right?: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.95fr)] items-baseline gap-x-2">
+      <div className="min-w-0 text-[length:var(--resume-entry-title-size)] font-semibold leading-snug text-[#111]">
+        {left}
+      </div>
+      <div className="min-w-0 text-center text-[length:var(--resume-body-size)] leading-snug text-[#333]">
+        {center}
+      </div>
+      <div className="min-w-0 text-right text-[length:var(--resume-meta-size)] leading-snug text-[#555]">
+        {right}
+      </div>
+    </div>
   );
 }
 
@@ -175,19 +192,16 @@ function WorkBlock({
       <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
           <div key={i}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
-                {e.company}
-                {e.title && (
-                  <span className="font-normal text-[#444]"> · {e.title}</span>
-                )}
-              </span>
-              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
-                {[dateRange(e.startDate, e.endDate, dateDisplayFormat), e.location]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </div>
+            <EntryMetaRow
+              left={e.company || "—"}
+              center={e.title}
+              right={[
+                dateRange(e.startDate, e.endDate, dateDisplayFormat),
+                e.location,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            />
             <Bullets items={e.bullets} />
           </div>
         ))}
@@ -213,17 +227,11 @@ function ProjectBlock({
       <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
           <div key={i}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
-                {e.name}
-                {e.role && (
-                  <span className="font-normal text-[#444]"> · {e.role}</span>
-                )}
-              </span>
-              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
-                {dateRange(e.startDate, e.endDate, dateDisplayFormat)}
-              </span>
-            </div>
+            <EntryMetaRow
+              left={e.name || "—"}
+              center={e.role}
+              right={dateRange(e.startDate, e.endDate, dateDisplayFormat)}
+            />
             {e.techStack.length > 0 && (
               <p className="mt-0.5 text-[length:var(--resume-meta-size)] text-[#666]">
                 {e.techStack.join(" / ")}
@@ -252,31 +260,36 @@ function EducationBlock({
     <section>
       <SectionTitle>{title}</SectionTitle>
       <div className="flex flex-col gap-[var(--resume-entry-gap)]">
-        {content.entries.map((e, i) => (
-          <div key={i}>
-            <div className="flex items-baseline justify-between gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="text-[length:var(--resume-entry-title-size)] font-semibold">
-                  {[e.city, e.school].filter(Boolean).join(" · ")}
-                </span>
-                {e.schoolTag && (
-                  <span className="rounded bg-[#eceff3] px-1.5 py-0.5 text-[9px] font-medium text-[#555]">
-                    {e.schoolTag}
+        {content.entries.map((e, i) => {
+          const schoolLabel = [e.school, e.city].filter(Boolean).join(" · ");
+          const centerLabel = [e.degree, e.studyType, e.major, e.college]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <div key={i}>
+              <EntryMetaRow
+                left={
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
+                    <span>{schoolLabel || "—"}</span>
+                    {e.schoolTag ? (
+                      <span className="rounded bg-[#eceff3] px-1.5 py-0.5 text-[9px] font-medium text-[#555]">
+                        {e.schoolTag}
+                      </span>
+                    ) : null}
                   </span>
-                )}
-              </div>
-              <span className="shrink-0 text-[length:var(--resume-meta-size)] text-[#666]">
-                {dateRange(e.startDate, e.endDate, dateDisplayFormat)}
-              </span>
+                }
+                center={centerLabel}
+                right={dateRange(e.startDate, e.endDate, dateDisplayFormat)}
+              />
+              {e.gpa ? (
+                <p className="mt-0.5 text-[length:var(--resume-body-size)] text-[#444]">
+                  GPA {e.gpa}
+                </p>
+              ) : null}
+              <Bullets items={e.notes} />
             </div>
-            <p className="text-[length:var(--resume-body-size)] text-[#444]">
-              {[e.degree, e.studyType, e.major, e.college, e.gpa && `GPA ${e.gpa}`]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <Bullets items={e.notes} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -318,23 +331,29 @@ function BasicInfoHeader({
   basic_info: ResumeContent["basic_info"];
   title: string;
 }) {
+  const hasAvatar = Boolean(basic_info.avatar?.trim());
+
   return (
-    <header>
-      <div className="flex items-start gap-4">
-        {basic_info.avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={basic_info.avatar}
-            alt=""
-            className="h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] shrink-0 rounded-md object-cover"
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight">
-            {basic_info.name || "你的姓名"}
-          </h1>
-          <BasicInfoPreviewLines basic_info={basic_info} title={title} />
-        </div>
+    <header className="relative">
+      {hasAvatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={basic_info.avatar}
+          alt=""
+          className="absolute right-0 top-0 z-[1] h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] object-cover"
+        />
+      ) : null}
+      <div
+        className={
+          hasAvatar
+            ? "pr-[calc(var(--resume-avatar-w)+0.85rem)]"
+            : undefined
+        }
+      >
+        <h1 className="text-center text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight text-[#111]">
+          {basic_info.name || "你的姓名"}
+        </h1>
+        <BasicInfoPreviewLines basic_info={basic_info} title={title} />
       </div>
     </header>
   );
@@ -392,7 +411,6 @@ export function ResumePreview({
   sectionOrder,
   sectionTitles,
   dateDisplayFormat = DEFAULT_DATE_DISPLAY_FORMAT,
-  density = DEFAULT_RESUME_DENSITY,
 }: ResumePreviewProps) {
   const { basic_info, summary, work, education, project, skills } = content;
   const measureRef = useRef<HTMLDivElement>(null);
@@ -421,13 +439,13 @@ export function ResumePreview({
     education.entries.some((e) => e.school || e.major) ||
     skills.categories.some((c) => c.label || c.items.length > 0);
 
-  const densityVars = resumeDensityCssVars(density);
+  const styleVars = resumeStyleCssVars();
 
   const sheetStyle = {
     fontFamily:
       "var(--font-noto), var(--font-outfit), system-ui, sans-serif" as const,
     width: A4_WIDTH_CSS,
-    ...densityVars,
+    ...styleVars,
   };
 
   const body = (
@@ -475,7 +493,7 @@ export function ResumePreview({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [ordered, content, title, sectionTitles, dateDisplayFormat, density]);
+  }, [ordered, content, title, sectionTitles, dateDisplayFormat]);
 
   return (
     <div className="resume-print-wrapper relative flex flex-col items-center gap-6 py-8">

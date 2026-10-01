@@ -32,8 +32,6 @@ import {
   setSectionDisplayTitle,
   getDateDisplayFormat,
   setDateDisplayFormat,
-  getResumeDensity,
-  setResumeDensity,
   DEFAULT_SECTION_LABELS,
   initSectionSubVersionsStore,
   readSectionSubVersionsStore,
@@ -52,7 +50,6 @@ import {
 } from "@/lib/ai/describe-target";
 import type { EditTarget, PendingAIEdit } from "@/types/ai-edit";
 import type { DateDisplayFormat } from "@/lib/resume/date-display";
-import type { ResumeDensity } from "@/lib/resume/density";
 import { AIModal } from "./AIModal";
 
 interface ResumeEditorProps {
@@ -183,11 +180,7 @@ export function ResumeEditor({
 
   const dateDisplayFormat: DateDisplayFormat = store
     ? getDateDisplayFormat(store)
-    : "YYYY-MM";
-
-  const density: ResumeDensity = store
-    ? getResumeDensity(store)
-    : "standard";
+    : "YYYY.MM";
 
   const saveNow = useCallback(
     async (
@@ -249,13 +242,6 @@ export function ResumeEditor({
   const handleDateDisplayFormatChange = useCallback(
     (format: DateDisplayFormat) => {
       updateStore((s) => setDateDisplayFormat(s, format));
-    },
-    [updateStore]
-  );
-
-  const handleDensityChange = useCallback(
-    (next: ResumeDensity) => {
-      updateStore((s) => setResumeDensity(s, next));
     },
     [updateStore]
   );
@@ -550,8 +536,6 @@ export function ResumeEditor({
       <EditorTopBar
         title={resumeTitle}
         saveState={saveState}
-        density={density}
-        onDensityChange={handleDensityChange}
         onTitleChange={handleResumeTitleChange}
         onExportPdf={handleExportPdf}
         exportingPdf={exportingPdf}
@@ -662,7 +646,6 @@ export function ResumeEditor({
             sectionOrder={sectionOrder}
             sectionTitles={store.sectionTitles}
             dateDisplayFormat={dateDisplayFormat}
-            density={density}
           />
         </div>
       </div>
