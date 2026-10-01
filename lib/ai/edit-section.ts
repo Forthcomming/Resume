@@ -1,4 +1,4 @@
-import { AIError, resolveDeepseekApiKey } from "@/lib/ai/deepseek";
+import { requestDeepseekJson } from "@/lib/ai/deepseek-client";
 import type { EditTarget } from "@/types/ai-edit";
 
 interface EditSectionParams {
@@ -74,84 +74,23 @@ ${JSON.stringify(content, null, 2)}
 请返回改写后的完整 JSON（结构与输入一致；相对原文须有实质差异）。`;
 }
 
-function stripCodeFence(s: string): string {
-  const trimmed = s.trim();
-  if (trimmed.startsWith("```")) {
-    return trimmed
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```$/, "")
-      .trim();
-  }
-  return trimmed;
-}
-
 export async function editSectionContent(
   params: EditSectionParams
 ): Promise<EditSectionResult> {
   const { target, content, instruction, apiKey: userApiKey } = params;
   const original = structuredClone(content);
-
-  const apiKey = resolveDeepseekApiKey(userApiKey);
-
-  const baseUrl = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
-
-  let res: Response;
-  try {
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: buildSystemPrompt(target) },
-          {
-            role: "user",
-            content: buildUserPrompt(target, content, instruction),
-          },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new AIError("AI 编辑超时，请稍后重试", 504);
-    }
-    throw new AIError("无法连接 DeepSeek 服务", 502);
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new AIError(
-      `DeepSeek 返回错误（${res.status}）${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-      502
-    );
-  }
-
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const raw = data.choices?.[0]?.message?.content;
-  if (!raw) {
-    throw new AIError("DeepSeek 未返回有效内容", 502);
-  }
-
-  let suggested: unknown;
-  try {
-    suggested = JSON.parse(stripCodeFence(raw));
-  } catch {
-    throw new AIError("AI 返回不是合法 JSON", 502);
-  }
+  const suggested = await requestDeepseekJson<unknown>({
+    apiKey: userApiKey,
+    systemPrompt: buildSystemPrompt(target),
+    userPrompt: buildUserPrompt(target, content, instruction),
+    temperature: 0.7,
+    errors: {
+      timeout: "AI 编辑超时，请稍后重试",
+      connection: "无法连接 DeepSeek 服务",
+      empty: "DeepSeek 未返回有效内容",
+      invalidJson: "AI 返回不是合法 JSON",
+    },
+  });
 
   return { original, suggested };
 }

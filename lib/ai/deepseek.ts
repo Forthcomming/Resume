@@ -2,15 +2,9 @@ import {
   normalizeResumeContent,
   type ResumeContent,
 } from "@/lib/resume/content";
+import { requestDeepseekJson } from "@/lib/ai/deepseek-client";
 
-export class AIError extends Error {
-  status: number;
-  constructor(message: string, status = 502) {
-    super(message);
-    this.name = "AIError";
-    this.status = status;
-  }
-}
+export { AIError } from "@/lib/ai/deepseek-client";
 
 const SYSTEM_PROMPT = `你是一个简历解析引擎。用户会给你一段从 PDF/DOCX 中提取的简历纯文本（可能格式混乱、顺序错乱）。
 请把它解析为严格的 JSON，结构如下（所有字段必须存在，缺失信息用空字符串或空数组）：
@@ -39,20 +33,6 @@ interface ParseResult {
 }
 
 /**
- * Prefer user-provided key from the request; fall back to server env for local/dev.
- */
-export function resolveDeepseekApiKey(userKey?: string | null): string {
-  const apiKey = userKey?.trim() || process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    throw new AIError(
-      "请先在设置中配置 DeepSeek API Key",
-      503
-    );
-  }
-  return apiKey;
-}
-
-/**
  * Send extracted resume text to DeepSeek and get back structured content.
  * Throws AIError when the key is missing or the response is invalid.
  */
@@ -60,67 +40,21 @@ export async function parseResumeText(
   text: string,
   options?: { apiKey?: string | null }
 ): Promise<ParseResult> {
-  const apiKey = resolveDeepseekApiKey(options?.apiKey);
-
-  const baseUrl = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
-
-  let res: Response;
-  try {
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `以下是简历原始文本：\n\n${text.slice(0, 20000)}`,
-          },
-        ],
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new AIError("解析超时，请稍后重试", 504);
-    }
-    throw new AIError("无法连接 DeepSeek 服务", 502);
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new AIError(
-      `DeepSeek 返回错误（${res.status}）${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-      502
-    );
-  }
-
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const raw = data.choices?.[0]?.message?.content;
-  if (!raw) {
-    throw new AIError("DeepSeek 未返回有效内容", 502);
-  }
-
-  let parsed: { title?: string; content?: Partial<ResumeContent> };
-  try {
-    parsed = JSON.parse(stripCodeFence(raw));
-  } catch {
-    throw new AIError("解析结果不是合法 JSON", 502);
-  }
+  const parsed = await requestDeepseekJson<{
+    title?: string;
+    content?: Partial<ResumeContent>;
+  }>({
+    apiKey: options?.apiKey,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: `以下是简历原始文本：\n\n${text.slice(0, 20000)}`,
+    temperature: 0.2,
+    errors: {
+      timeout: "解析超时，请稍后重试",
+      connection: "无法连接 DeepSeek 服务",
+      empty: "DeepSeek 未返回有效内容",
+      invalidJson: "解析结果不是合法 JSON",
+    },
+  });
 
   const content = normalizeResumeContent(parsed.content ?? (parsed as Partial<ResumeContent>));
   const title =
@@ -129,15 +63,4 @@ export async function parseResumeText(
     "导入的简历";
 
   return { title, content };
-}
-
-function stripCodeFence(s: string): string {
-  const trimmed = s.trim();
-  if (trimmed.startsWith("```")) {
-    return trimmed
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```$/, "")
-      .trim();
-  }
-  return trimmed;
 }

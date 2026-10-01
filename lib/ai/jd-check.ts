@@ -1,4 +1,4 @@
-import { AIError, resolveDeepseekApiKey } from "@/lib/ai/deepseek";
+import { AIError, requestDeepseekJson } from "@/lib/ai/deepseek-client";
 import type { ResumeContent } from "@/lib/resume/content";
 import { SECTION_IDS } from "@/lib/resume/versions";
 import type { JdCheckIssue, JdCheckResult, JdIssueSeverity } from "@/types/jd-check";
@@ -25,17 +25,6 @@ const SYSTEM_PROMPT = `你是中文简历投递顾问。根据目标岗位 JD，
     }
   ]
 }`;
-
-function stripCodeFence(s: string): string {
-  const trimmed = s.trim();
-  if (trimmed.startsWith("```")) {
-    return trimmed
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```$/, "")
-      .trim();
-  }
-  return trimmed;
-}
 
 function asSeverity(value: unknown): JdIssueSeverity {
   if (value === "high" || value === "medium" || value === "low") return value;
@@ -70,34 +59,13 @@ export async function checkResumeAgainstJd(params: {
   jobDescription: string;
   apiKey?: string | null;
 }): Promise<JdCheckResult> {
-  const apiKey = resolveDeepseekApiKey(params.apiKey);
   const jobTitle = params.jobTitle.trim();
   const jobDescription = params.jobDescription.trim();
   if (!jobDescription) {
     throw new AIError("请先粘贴岗位 JD", 400);
   }
 
-  const baseUrl = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
-
-  let res: Response;
-  try {
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `目标岗位：${jobTitle || "未填写"}
+  const userPrompt = `目标岗位：${jobTitle || "未填写"}
 
 岗位 JD：
 ${jobDescription.slice(0, 12000)}
@@ -105,45 +73,20 @@ ${jobDescription.slice(0, 12000)}
 当前简历（JSON）：
 ${JSON.stringify(compactResume(params.content), null, 2)}
 
-请返回最多 5 条匹配问题。`,
-          },
-        ],
-        temperature: 0.3,
-        response_format: { type: "json_object" },
-      }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new AIError("检查超时，请稍后重试", 504);
-    }
-    throw new AIError("无法连接 DeepSeek 服务", 502);
-  } finally {
-    clearTimeout(timeout);
-  }
+请返回最多 5 条匹配问题。`;
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new AIError(
-      `DeepSeek 返回错误（${res.status}）${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-      502
-    );
-  }
-
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const raw = data.choices?.[0]?.message?.content;
-  if (!raw) {
-    throw new AIError("DeepSeek 未返回有效内容", 502);
-  }
-
-  let parsed: { issues?: unknown };
-  try {
-    parsed = JSON.parse(stripCodeFence(raw));
-  } catch {
-    throw new AIError("检查结果不是合法 JSON", 502);
-  }
+  const parsed = await requestDeepseekJson<{ issues?: unknown }>({
+    apiKey: params.apiKey,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    temperature: 0.3,
+    errors: {
+      timeout: "检查超时，请稍后重试",
+      connection: "无法连接 DeepSeek 服务",
+      empty: "DeepSeek 未返回有效内容",
+      invalidJson: "检查结果不是合法 JSON",
+    },
+  });
 
   const issuesRaw = Array.isArray(parsed.issues) ? parsed.issues : [];
   const issues: JdCheckIssue[] = issuesRaw
