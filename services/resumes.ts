@@ -7,6 +7,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   getSectionOrder,
   initSectionSubVersionsStore,
+  sanitizeSectionSubVersionsStore,
+  type SectionSubVersionsStore,
 } from "@/lib/resume/versions";
 import type { Resume } from "@/types/resume";
 import type { ResumeContent } from "@/lib/resume/content";
@@ -115,6 +117,39 @@ export async function createResume(
 
   if (error || !data) {
     console.error("[resumes] create failed", error?.message);
+    return null;
+  }
+  return data.id as string;
+}
+
+/** Create a resume with an existing version store, used for tailored copies. */
+export async function createResumeWorkspace(
+  title: string,
+  content: ResumeContent,
+  versionStore: SectionSubVersionsStore
+): Promise<string | null> {
+  const userId = await getCurrentUserId();
+  if (!canPersistToCloud(userId)) return null;
+
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+
+  const sanitized = sanitizeSectionSubVersionsStore(versionStore);
+  const { data, error } = await supabase
+    .from("resumes")
+    .insert({
+      user_id: userId,
+      title: title.trim(),
+      section_order: getSectionOrder(sanitized),
+      tags: [],
+      content,
+      version_store: sanitized,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("[resumes] tailored copy create failed", error?.message);
     return null;
   }
   return data.id as string;

@@ -1,7 +1,11 @@
 import type { Resume } from "@/types/resume";
 import type { ResumeContent } from "@/lib/resume/content";
 import { LOCAL_GUEST_USER_ID } from "@/lib/auth/constants";
-import { removeSectionSubVersionsStore } from "@/lib/resume/versions";
+import {
+  removeSectionSubVersionsStore,
+  saveSectionSubVersionsStore,
+  type SectionSubVersionsStore,
+} from "@/lib/resume/versions";
 
 export const RESUME_INDEX_KEY = "resume-index";
 export const RESUME_INDEX_CHANGED = "resume-index-changed";
@@ -101,6 +105,17 @@ export function readLocalResumeContent(
   } catch {
     return null;
   }
+}
+
+export function saveLocalResumeWorkspace(
+  id: string,
+  title: string,
+  content: ResumeContent,
+  versionStore: SectionSubVersionsStore
+): void {
+  saveLocalResumeContent(id, content);
+  saveSectionSubVersionsStore(id, versionStore);
+  upsertLocalResume({ id, title: title.trim() });
 }
 
 export function removeLocalResume(id: string): void {
