@@ -37,5 +37,10 @@ next-env.d.ts
 .cursor/
 scaffoldtmp/
 
+# Local agent brainstorming sessions and extracted document scratch files
+.superpowers/
+.tmp-docx-template/
+.tmp-docx-template.zip
+
 .vercel
 .env*

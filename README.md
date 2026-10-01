@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)。构建与检查：`npm run build` / `npm run lint`。
+打开 [http://localhost:3000](http://localhost:3000)。构建与检查：`npm test` / `npm run lint` / `npm run build`。
 
 配置：在 `.env.local` 填写 Supabase 相关变量。DeepSeek API Key 由用户在设置页自行填写（BYOK），也可选配服务端 `DEEPSEEK_API_KEY`。
 

@@ -9,6 +9,7 @@
 ```bash
 npm install
 npm run dev    # 清 .next 后启动 Next dev
+npm test
 npm run build
 npm run lint
 ```
@@ -25,16 +26,17 @@ npm run lint
 
 ## 目录约定
 
-- `app/` 页面与 Route Handlers；`components/resume/editor/` 编辑器主战场
-- `lib/ai/` DeepSeek 与客户端薄封装；`lib/resume/` 数据与导出
+- `app/` 页面与 Route Handlers；`components/resume/editor/` 编辑器与三个职责 hook
+- `lib/ai/` DeepSeek 统一 JSON 调用层与客户端薄封装；`lib/resume/` 数据与导出
 - `types/` 共享类型；`docs/` 产品/架构说明（以 `docs/ARCHITECTURE.md` 与代码为准）
 - Agent skills 在 `.agents/skills/`；勿往仓库根乱丢 `plan.md` / `todo.md`
 
 ## 当前状态
 
 - 主闭环可用：dashboard、编辑器、板块版本、BYOK、PDF、JD-check
-- 分支 `cursor/section-sub-versions`；样式与 JD-check 等改动可能仍在工作区
-- 下一步优先：收 WIP、抽 DeepSeek 调用重复，而不是扩功能
+- 分支 `cursor/section-sub-versions`；固定校招预览、最小单测、DeepSeek 调用层与编辑器 hook 已收口
+- `@supabase/supabase-js` 最低 `2.110.5`，用于规避 middleware 的 Edge Runtime `process.version` 构建警告
+- 下一步优先：邀请真实求职者验证模块复用与 JD 定向价值，再决定扩功能
 
 ## 红线
 

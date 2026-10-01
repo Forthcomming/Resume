@@ -41,9 +41,9 @@ app/
     jd-check/route.ts
 components/
   landing/ dashboard/ layout/ settings/ auth/
-  resume/editor/           # 编辑器主战场
+  resume/editor/           # 编辑器 UI；hooks/ 分离保存、版本与 AI 状态机
 lib/
-  ai/                      # DeepSeek、client 薄封装、BYOK
+  ai/                      # DeepSeek 统一 JSON 调用层、client 薄封装、BYOK
   resume/                  # content、versions、export-pdf
   supabase/ auth/ storage/
 services/
@@ -111,7 +111,7 @@ docs/                      # PRD、设计系统、本架构
 
 ## 7. AI 与 BYOK
 
-- **Parse / Edit / JD-check**：均走 DeepSeek；提示词与解析在 `lib/ai/*`。
+- **Parse / Edit / JD-check**：均通过 `deepseek-client.ts` 处理鉴权、超时、HTTP 与 JSON；各功能提示词和业务校验保留在独立模块。
 - **客户端**：`client-edit.ts`、`client-jd-check.ts`；Key 存 localStorage（设置页 / 门禁可 skip）。
 - **JD-check**：输出问题列表并支持「去优化」跳转改写，不是单独的「核心优势文案」API。
 
@@ -119,7 +119,13 @@ docs/                      # PRD、设计系统、本架构
 
 预览 DOM → `lib/resume/export-pdf.ts`（html2canvas + jsPDF）。模板为编辑器内单栏预览，无服务端渲染队列。
 
-## 9. 明确不做 / 已废弃选型
+## 9. 测试与构建
+
+- `npm test`：Vitest，覆盖排序、板块版本迁移/组合/操作和 DeepSeek JSON 调用层。
+- `npm run lint`：Next.js ESLint。
+- `npm run build`：生产构建；`@supabase/supabase-js` 最低版本为 `2.110.5`，避免 middleware Edge Runtime 的静态 `process.version` 警告。
+
+## 10. 明确不做 / 已废弃选型
 
 以下出现在旧文档或 PRD 中，**当前仓库未使用**：
 
@@ -129,7 +135,7 @@ docs/                      # PRD、设计系统、本架构
 - `POST /api/advantage`、`POST /api/export`
 - 多表 sections / section_versions / export_schemes（现为单表 jsonb）
 
-## 10. 相关文档
+## 11. 相关文档
 
 - 产品原稿：`docs/resume-optimizer-prd.md`（历史需求，实现以本文为准）
 - 设计系统：`docs/resumekit-design-system-vyra.md`
