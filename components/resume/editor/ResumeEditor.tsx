@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { AIModal } from "./AIModal";
 import { EditorTopBar } from "./EditorTopBar";
-import { JDPanel } from "./JDPanel";
+import { JDTailorEntry } from "./JDTailorEntry";
 import { ResumePreview } from "./ResumePreview";
 import { SectionEditorCard } from "./SectionEditorCard";
 import { useResumeAIEdit } from "./hooks/useResumeAIEdit";
@@ -160,9 +160,11 @@ export function ResumeEditor({
             })}
           </div>
 
-          <JDPanel
-            content={versions.composedContent}
-            onOptimize={ai.optimizeSection}
+          <JDTailorEntry
+            resumeId={id}
+            title={persistence.resumeTitle}
+            saveState={persistence.saveState}
+            onRetrySave={persistence.retrySave}
           />
         </div>
 
