@@ -42,13 +42,10 @@ export function buildTailoredWorkspace(input: {
     throw new Error("母版内容已更新，请重新生成适配方案");
   }
 
-  const switchIds = new Set(input.selected.switchActionIds);
-  const rewriteIds = new Set(input.selected.rewriteActionIds);
-  const selectedActions = input.plan.actions.filter((action) => {
-    if (action.type === "switch_version") return switchIds.has(action.id);
-    if (action.type === "rewrite_bullet") return rewriteIds.has(action.id);
-    return false;
-  });
+  const selectedIds = new Set(input.selected.actionIds);
+  const selectedActions = input.plan.actions.filter((action) =>
+    selectedIds.has(action.id)
+  );
 
   const versionName = `${input.plan.jobTitle.trim() || "岗位定制"}版`;
   const versionStore = applyTailoringActions(

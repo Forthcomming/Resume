@@ -1,8 +1,12 @@
 import {
   emptyResumeContent,
+  emptyProjectEntry,
+  emptyWorkEntry,
   normalizeResumeContent,
   normalizeSectionContent,
+  type ProjectEntry,
   type ResumeContent,
+  type WorkEntry,
 } from "@/lib/resume/content";
 import {
   DEFAULT_DATE_DISPLAY_FORMAT,
@@ -29,8 +33,39 @@ export interface SectionBucket<T = unknown> {
   versions: SectionSubVersion<T>[];
 }
 
+export type EntrySectionId = "work" | "project";
+export type StandardSectionId = Exclude<SectionId, EntrySectionId>;
+export type WorkEntryFacts = Pick<
+  WorkEntry,
+  "company" | "location" | "startDate" | "endDate"
+>;
+export type WorkEntryVariant = Pick<WorkEntry, "title" | "bullets">;
+export type ProjectEntryFacts = Pick<
+  ProjectEntry,
+  "name" | "startDate" | "endDate" | "link"
+>;
+export type ProjectEntryVariant = Pick<
+  ProjectEntry,
+  "role" | "techStack" | "bullets"
+>;
+
+export type EntryVersion<T> = SectionSubVersion<T>;
+
+export interface EntryModule<TFacts, TVariant> {
+  id: string;
+  enabled: boolean;
+  facts: TFacts;
+  activeVersionId: string;
+  versions: EntryVersion<TVariant>[];
+}
+
+export interface EntrySectionStore<TFacts, TVariant> {
+  order: string[];
+  entries: Record<string, EntryModule<TFacts, TVariant>>;
+}
+
 export interface SectionSubVersionsStore {
-  schemaVersion: 1;
+  schemaVersion: 2;
   /** Display order of sections in editor + preview (all sections, including basic_info). */
   sectionOrder: SectionId[];
   /** Custom display labels per section (editor + PDF preview). */
@@ -42,6 +77,19 @@ export interface SectionSubVersionsStore {
   sections: {
     [K in SectionId]: SectionBucket<ResumeContent[K]>;
   };
+  entrySections: {
+    work: EntrySectionStore<WorkEntryFacts, WorkEntryVariant>;
+    project: EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant>;
+  };
+}
+
+interface LegacySectionSubVersionsStore {
+  schemaVersion: 1;
+  sectionOrder: SectionId[];
+  sectionTitles: Partial<Record<SectionId, string>>;
+  dateDisplayFormat?: DateDisplayFormat;
+  density?: unknown;
+  sections: { [K in SectionId]: SectionBucket<ResumeContent[K]> };
 }
 
 /** @deprecated Old global snapshot model — kept only for migration. */
@@ -167,6 +215,117 @@ function createSubVersion<T>(
   };
 }
 
+function stableId(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `entry-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function splitWorkEntry(entry: WorkEntry): {
+  facts: WorkEntryFacts;
+  variant: WorkEntryVariant;
+} {
+  return {
+    facts: {
+      company: entry.company,
+      location: entry.location,
+      startDate: entry.startDate,
+      endDate: entry.endDate,
+    },
+    variant: { title: entry.title, bullets: [...entry.bullets] },
+  };
+}
+
+function splitProjectEntry(entry: ProjectEntry): {
+  facts: ProjectEntryFacts;
+  variant: ProjectEntryVariant;
+} {
+  return {
+    facts: {
+      name: entry.name,
+      startDate: entry.startDate,
+      endDate: entry.endDate,
+      link: entry.link,
+    },
+    variant: {
+      role: entry.role,
+      techStack: [...entry.techStack],
+      bullets: [...entry.bullets],
+    },
+  };
+}
+
+function identityPart(value: string): string {
+  return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+}
+
+function entryIdentity(sectionId: EntrySectionId, entry: WorkEntry | ProjectEntry): string {
+  return sectionId === "work"
+    ? [
+        identityPart((entry as WorkEntry).company),
+        entry.startDate,
+        entry.endDate,
+      ].join("|")
+    : [
+        identityPart((entry as ProjectEntry).name),
+        entry.startDate,
+        entry.endDate,
+      ].join("|");
+}
+
+function variantSignature(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+function uniqueVersionName<T>(versions: EntryVersion<T>[], requested: string): string {
+  const base = requested.trim() || "默认";
+  if (!versions.some((version) => version.name === base)) return base;
+  let suffix = 2;
+  while (versions.some((version) => version.name === `${base} ${suffix}`)) suffix += 1;
+  return `${base} ${suffix}`;
+}
+
+function createEntrySectionFromFlat(
+  sectionId: "work",
+  entries: WorkEntry[]
+): EntrySectionStore<WorkEntryFacts, WorkEntryVariant>;
+function createEntrySectionFromFlat(
+  sectionId: "project",
+  entries: ProjectEntry[]
+): EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant>;
+function createEntrySectionFromFlat(
+  sectionId: EntrySectionId,
+  entries: Array<WorkEntry | ProjectEntry>
+): EntrySectionStore<WorkEntryFacts | ProjectEntryFacts, WorkEntryVariant | ProjectEntryVariant> {
+  const result: EntrySectionStore<
+    WorkEntryFacts | ProjectEntryFacts,
+    WorkEntryVariant | ProjectEntryVariant
+  > = { order: [], entries: {} };
+  const counts = new Map<string, number>();
+  entries.forEach((entry) => {
+    const identity = entryIdentity(sectionId, entry);
+    const ordinal = (counts.get(identity) ?? 0) + 1;
+    counts.set(identity, ordinal);
+    const id = stableId(`${sectionId}|${identity}|${ordinal}`);
+    const split = sectionId === "work"
+      ? splitWorkEntry(entry as WorkEntry)
+      : splitProjectEntry(entry as ProjectEntry);
+    const version = createSubVersion("默认", split.variant, "user", `${id}-default`);
+    result.order.push(id);
+    result.entries[id] = {
+      id,
+      enabled: true,
+      facts: split.facts,
+      activeVersionId: version.id,
+      versions: [version],
+    };
+  });
+  return result;
+}
+
 function emptyBucket<K extends SectionId>(
   sectionId: K,
   content?: ResumeContent[K]
@@ -239,7 +398,7 @@ export function initSectionSubVersionsStore(
 ): SectionSubVersionsStore {
   const normalized = normalizeResumeContent(content);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sectionOrder: defaultSectionOrder(),
     sectionTitles: {},
     dateDisplayFormat: DEFAULT_DATE_DISPLAY_FORMAT,
@@ -251,6 +410,10 @@ export function initSectionSubVersionsStore(
       project: emptyBucket("project", normalized.project),
       skills: emptyBucket("skills", normalized.skills),
     },
+    entrySections: {
+      work: createEntrySectionFromFlat("work", normalized.work.entries),
+      project: createEntrySectionFromFlat("project", normalized.project.entries),
+    },
   };
 }
 
@@ -259,6 +422,19 @@ function isSectionSubVersionsStore(
 ): value is SectionSubVersionsStore {
   if (!value || typeof value !== "object") return false;
   const v = value as SectionSubVersionsStore;
+  return (
+    v.schemaVersion === 2 &&
+    !!v.sections?.basic_info?.versions &&
+    !!v.entrySections?.work?.entries &&
+    !!v.entrySections?.project?.entries
+  );
+}
+
+function isLegacySectionSubVersionsStore(
+  value: unknown
+): value is LegacySectionSubVersionsStore {
+  if (!value || typeof value !== "object") return false;
+  const v = value as LegacySectionSubVersionsStore;
   return v.schemaVersion === 1 && !!v.sections?.basic_info?.versions;
 }
 
@@ -300,7 +476,7 @@ function migrateSectionBucket<K extends SectionId>(
 export function migrateLegacyVersionStore(
   legacy: LegacyVersionStore
 ): SectionSubVersionsStore {
-  return {
+  const sectionStore: LegacySectionSubVersionsStore = {
     schemaVersion: 1,
     sectionOrder: defaultSectionOrder(),
     sectionTitles: {},
@@ -314,6 +490,92 @@ export function migrateLegacyVersionStore(
       skills: migrateSectionBucket("skills", legacy),
     },
   };
+  return migrateSectionStoreV1(sectionStore);
+}
+
+function migrateEntrySectionV1(
+  sectionId: "work",
+  bucket: SectionBucket<ResumeContent["work"]>
+): EntrySectionStore<WorkEntryFacts, WorkEntryVariant>;
+function migrateEntrySectionV1(
+  sectionId: "project",
+  bucket: SectionBucket<ResumeContent["project"]>
+): EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant>;
+function migrateEntrySectionV1(
+  sectionId: EntrySectionId,
+  bucket: SectionBucket<ResumeContent[EntrySectionId]>
+): EntrySectionStore<WorkEntryFacts | ProjectEntryFacts, WorkEntryVariant | ProjectEntryVariant> {
+  const result: EntrySectionStore<
+    WorkEntryFacts | ProjectEntryFacts,
+    WorkEntryVariant | ProjectEntryVariant
+  > = { order: [], entries: {} };
+  const active = bucket.versions.find((version) => version.id === bucket.activeVersionId) ?? bucket.versions[0];
+  const orderedVersions = active
+    ? [active, ...bucket.versions.filter((version) => version.id !== active.id)]
+    : bucket.versions;
+
+  for (const sectionVersion of orderedVersions) {
+    const counts = new Map<string, number>();
+    for (const rawEntry of sectionVersion.content.entries) {
+      const entry = rawEntry as WorkEntry | ProjectEntry;
+      const identity = entryIdentity(sectionId, entry);
+      const ordinal = (counts.get(identity) ?? 0) + 1;
+      counts.set(identity, ordinal);
+      const id = stableId(`${sectionId}|${identity}|${ordinal}`);
+      const split = sectionId === "work"
+        ? splitWorkEntry(entry as WorkEntry)
+        : splitProjectEntry(entry as ProjectEntry);
+      let entryModule = result.entries[id];
+      if (!entryModule) {
+        entryModule = {
+          id,
+          enabled: sectionVersion.id === active?.id,
+          facts: split.facts,
+          activeVersionId: "",
+          versions: [],
+        };
+        result.entries[id] = entryModule;
+        result.order.push(id);
+      }
+      const signature = variantSignature(split.variant);
+      let entryVersion = entryModule.versions.find(
+        (version) => variantSignature(version.content) === signature
+      );
+      if (!entryVersion) {
+        entryVersion = createSubVersion(
+          uniqueVersionName(entryModule.versions, sectionVersion.name),
+          split.variant,
+          sectionVersion.createdBy,
+          `${id}-${sectionVersion.id}`
+        );
+        entryModule.versions.push(entryVersion);
+      }
+      if (sectionVersion.id === active?.id) {
+        entryModule.enabled = true;
+        entryModule.facts = split.facts;
+        entryModule.activeVersionId = entryVersion.id;
+      } else if (!entryModule.activeVersionId) {
+        entryModule.activeVersionId = entryVersion.id;
+      }
+    }
+  }
+  return result;
+}
+
+export function migrateSectionStoreV1(
+  store: LegacySectionSubVersionsStore
+): SectionSubVersionsStore {
+  return sanitizeSectionSubVersionsStore({
+    schemaVersion: 2,
+    sectionOrder: store.sectionOrder,
+    sectionTitles: store.sectionTitles,
+    dateDisplayFormat: store.dateDisplayFormat,
+    sections: store.sections,
+    entrySections: {
+      work: migrateEntrySectionV1("work", store.sections.work),
+      project: migrateEntrySectionV1("project", store.sections.project),
+    },
+  });
 }
 
 function sanitizeSectionBucket<K extends SectionId>(
@@ -342,11 +604,62 @@ function sanitizeSectionBucket<K extends SectionId>(
   };
 }
 
+function sanitizeEntrySection(
+  sectionId: "work",
+  value: EntrySectionStore<WorkEntryFacts, WorkEntryVariant> | undefined
+): EntrySectionStore<WorkEntryFacts, WorkEntryVariant>;
+function sanitizeEntrySection(
+  sectionId: "project",
+  value: EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant> | undefined
+): EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant>;
+function sanitizeEntrySection(
+  sectionId: EntrySectionId,
+  value:
+    | EntrySectionStore<WorkEntryFacts, WorkEntryVariant>
+    | EntrySectionStore<ProjectEntryFacts, ProjectEntryVariant>
+    | undefined
+): EntrySectionStore<WorkEntryFacts | ProjectEntryFacts, WorkEntryVariant | ProjectEntryVariant> {
+  const entries: Record<
+    string,
+    EntryModule<WorkEntryFacts | ProjectEntryFacts, WorkEntryVariant | ProjectEntryVariant>
+  > = {};
+  for (const [key, raw] of Object.entries(value?.entries ?? {})) {
+    if (!raw || typeof raw !== "object") continue;
+    const id = raw.id || key;
+    const fallback = sectionId === "work" ? splitWorkEntry(emptyWorkEntry()) : splitProjectEntry(emptyProjectEntry());
+    const versions: EntryVersion<WorkEntryVariant | ProjectEntryVariant>[] = (
+      raw.versions ?? []
+    ).map((version: EntryVersion<WorkEntryVariant | ProjectEntryVariant>) => ({
+      ...version,
+      id: version.id || newId(),
+      name: version.name?.trim() || "默认",
+      createdAt: version.createdAt || nowIso(),
+      createdBy: version.createdBy === "ai" ? "ai" as const : "user" as const,
+      content: jsonClone(version.content ?? fallback.variant),
+    }));
+    if (versions.length === 0) {
+      versions.push(createSubVersion("默认", fallback.variant));
+    }
+    entries[id] = {
+      id,
+      enabled: raw.enabled !== false,
+      facts: jsonClone(raw.facts ?? fallback.facts),
+      activeVersionId: versions.some((version) => version.id === raw.activeVersionId)
+        ? raw.activeVersionId
+        : versions[0].id,
+      versions,
+    };
+  }
+  const order = (value?.order ?? []).filter((id, index, list) => entries[id] && list.indexOf(id) === index);
+  for (const id of Object.keys(entries)) if (!order.includes(id)) order.push(id);
+  return { order, entries };
+}
+
 export function sanitizeSectionSubVersionsStore(
   store: SectionSubVersionsStore
 ): SectionSubVersionsStore {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sectionOrder: sanitizeSectionOrder(store.sectionOrder),
     sectionTitles: sanitizeSectionTitles(store.sectionTitles),
     dateDisplayFormat: getDateDisplayFormat(store),
@@ -358,6 +671,10 @@ export function sanitizeSectionSubVersionsStore(
       project: sanitizeSectionBucket("project", store.sections?.project),
       skills: sanitizeSectionBucket("skills", store.sections?.skills),
     },
+    entrySections: {
+      work: sanitizeEntrySection("work", store.entrySections?.work),
+      project: sanitizeEntrySection("project", store.entrySections?.project),
+    },
   };
 }
 
@@ -365,8 +682,9 @@ export function sanitizeSectionSubVersionsStore(
 export function parseSectionSubVersionsStore(
   raw: unknown
 ): SectionSubVersionsStore | null {
-  if (!isSectionSubVersionsStore(raw)) return null;
-  return sanitizeSectionSubVersionsStore(raw);
+  if (isSectionSubVersionsStore(raw)) return sanitizeSectionSubVersionsStore(raw);
+  if (isLegacySectionSubVersionsStore(raw)) return migrateSectionStoreV1(raw);
+  return null;
 }
 
 export function readSectionSubVersionsStore(
@@ -378,9 +696,8 @@ export function readSectionSubVersionsStore(
     const nextRaw = localStorage.getItem(sectionSubVersionsKey(resumeId));
     if (nextRaw) {
       const parsed = JSON.parse(nextRaw);
-      if (isSectionSubVersionsStore(parsed)) {
-        return sanitizeSectionSubVersionsStore(parsed);
-      }
+      const store = parseSectionSubVersionsStore(parsed);
+      if (store) return store;
     }
   } catch {
     /* fall through to legacy */
@@ -428,14 +745,191 @@ export function composeFromSectionSubVersions(
     return emptyResumeContent()[id];
   };
 
+  const workEntries = store.entrySections.work.order.flatMap((id) => {
+    const entryModule = store.entrySections.work.entries[id];
+    if (!entryModule?.enabled) return [];
+    const version = entryModule.versions.find((item) => item.id === entryModule.activeVersionId) ?? entryModule.versions[0];
+    return version ? [{ ...jsonClone(entryModule.facts), ...jsonClone(version.content) }] : [];
+  });
+  const projectEntries = store.entrySections.project.order.flatMap((id) => {
+    const entryModule = store.entrySections.project.entries[id];
+    if (!entryModule?.enabled) return [];
+    const version = entryModule.versions.find((item) => item.id === entryModule.activeVersionId) ?? entryModule.versions[0];
+    return version ? [{ ...jsonClone(entryModule.facts), ...jsonClone(version.content) }] : [];
+  });
+
   return normalizeResumeContent({
     basic_info: pick("basic_info"),
     summary: pick("summary"),
-    work: pick("work"),
+    work: { entries: workEntries },
     education: pick("education"),
-    project: pick("project"),
+    project: { entries: projectEntries },
     skills: pick("skills"),
   });
+}
+
+export function setEntryEnabled(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId,
+  entryId: string,
+  enabled: boolean
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry || entry.enabled === enabled) return store;
+  return {
+    ...store,
+    entrySections: {
+      ...store.entrySections,
+      [sectionId]: {
+        ...section,
+        entries: { ...section.entries, [entryId]: { ...entry, enabled } },
+      },
+    },
+  };
+}
+
+export function reorderEntryModules(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId,
+  fromIndex: number,
+  toIndex: number
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const order = reorderList(section.order, fromIndex, toIndex);
+  return order === section.order
+    ? store
+    : {
+        ...store,
+        entrySections: {
+          ...store.entrySections,
+          [sectionId]: { ...section, order },
+        },
+      };
+}
+
+export function addEntryModule(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const id = newId();
+  const split = sectionId === "work" ? splitWorkEntry(emptyWorkEntry()) : splitProjectEntry(emptyProjectEntry());
+  const version = createSubVersion("默认", split.variant);
+  const entry = { id, enabled: true, facts: split.facts, activeVersionId: version.id, versions: [version] };
+  return {
+    ...store,
+    entrySections: {
+      ...store.entrySections,
+      [sectionId]: {
+        order: [...section.order, id],
+        entries: { ...section.entries, [id]: entry },
+      },
+    },
+  } as SectionSubVersionsStore;
+}
+
+export function deleteEntryModule(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId,
+  entryId: string
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  if (!section.entries[entryId]) return store;
+  const entries = { ...section.entries };
+  delete entries[entryId];
+  return {
+    ...store,
+    entrySections: {
+      ...store.entrySections,
+      [sectionId]: { order: section.order.filter((id) => id !== entryId), entries },
+    },
+  } as SectionSubVersionsStore;
+}
+
+export function updateEntryFacts(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId,
+  entryId: string,
+  facts: WorkEntryFacts | ProjectEntryFacts
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry) return store;
+  return {
+    ...store,
+    entrySections: {
+      ...store.entrySections,
+      [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, facts: jsonClone(facts) } } },
+    },
+  } as SectionSubVersionsStore;
+}
+
+export function updateActiveEntryVersionContent(
+  store: SectionSubVersionsStore,
+  sectionId: EntrySectionId,
+  entryId: string,
+  content: WorkEntryVariant | ProjectEntryVariant
+): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry) return store;
+  const versions = entry.versions.map((version) =>
+    version.id === entry.activeVersionId ? { ...version, content: jsonClone(content) } : version
+  );
+  return {
+    ...store,
+    entrySections: {
+      ...store.entrySections,
+      [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, versions } } },
+    },
+  } as SectionSubVersionsStore;
+}
+
+export function setActiveEntryVersion(store: SectionSubVersionsStore, sectionId: EntrySectionId, entryId: string, versionId: string): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry?.versions.some((version) => version.id === versionId)) return store;
+  return {
+    ...store,
+    entrySections: { ...store.entrySections, [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, activeVersionId: versionId } } } },
+  } as SectionSubVersionsStore;
+}
+
+export function addEntryVersion(store: SectionSubVersionsStore, sectionId: EntrySectionId, entryId: string, name: string, options?: { content?: WorkEntryVariant | ProjectEntryVariant; createdBy?: SectionCreatedBy }): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry) return store;
+  const active = entry.versions.find((version) => version.id === entry.activeVersionId) ?? entry.versions[0];
+  const version = createSubVersion(name.trim() || "新版本", options?.content ?? active.content, options?.createdBy ?? "user");
+  return {
+    ...store,
+    entrySections: { ...store.entrySections, [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, activeVersionId: version.id, versions: [...entry.versions, version] } } } },
+  } as SectionSubVersionsStore;
+}
+
+export function renameEntryVersion(store: SectionSubVersionsStore, sectionId: EntrySectionId, entryId: string, versionId: string, name: string): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry || !name.trim()) return store;
+  const versions = entry.versions.map((version) => version.id === versionId ? { ...version, name: name.trim() } : version);
+  return { ...store, entrySections: { ...store.entrySections, [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, versions } } } } } as SectionSubVersionsStore;
+}
+
+export function duplicateEntryVersion(store: SectionSubVersionsStore, sectionId: EntrySectionId, entryId: string, versionId: string): SectionSubVersionsStore {
+  const entry = store.entrySections[sectionId].entries[entryId];
+  const source = entry?.versions.find((version) => version.id === versionId);
+  return source ? addEntryVersion(store, sectionId, entryId, `${source.name} 副本`, { content: source.content }) : store;
+}
+
+export function deleteEntryVersion(store: SectionSubVersionsStore, sectionId: EntrySectionId, entryId: string, versionId: string): SectionSubVersionsStore {
+  const section = store.entrySections[sectionId];
+  const entry = section.entries[entryId];
+  if (!entry || entry.versions.length <= 1) return store;
+  const versions = entry.versions.filter((version) => version.id !== versionId);
+  if (versions.length === entry.versions.length) return store;
+  const activeVersionId = entry.activeVersionId === versionId ? versions[0].id : entry.activeVersionId;
+  return { ...store, entrySections: { ...store.entrySections, [sectionId]: { ...section, entries: { ...section.entries, [entryId]: { ...entry, activeVersionId, versions } } } } } as SectionSubVersionsStore;
 }
 
 export function getActiveSectionContent<K extends SectionId>(
@@ -631,8 +1125,13 @@ export function formatVersionDate(iso: string): string {
 
 /** Total sub-version count across all sections (for summary UI). */
 export function countAllSubVersions(store: SectionSubVersionsStore): number {
-  return SECTION_IDS.reduce(
-    (sum, id) => sum + store.sections[id].versions.length,
+  const standard = (["basic_info", "summary", "education", "skills"] as StandardSectionId[])
+    .reduce((sum, id) => sum + store.sections[id].versions.length, 0);
+  const entries = (["work", "project"] as EntrySectionId[]).reduce(
+    (sum, sectionId) =>
+      sum + Object.values(store.entrySections[sectionId].entries)
+        .reduce((entrySum, entry) => entrySum + entry.versions.length, 0),
     0
   );
+  return standard + entries;
 }

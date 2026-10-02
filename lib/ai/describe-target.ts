@@ -15,8 +15,11 @@ export function describeAIEditTarget(
   }
   if (target.scope === "bullet") {
     const label = BULLET_SECTION_LABELS[target.sectionId] ?? sectionTitle;
+    const entryLabel = "entryIndex" in target
+      ? ` 第 ${target.entryIndex + 1} 条`
+      : "";
     return {
-      title: `AI 优化 · ${label} 第 ${target.entryIndex + 1} 条`,
+      title: `AI 优化 · ${label}${entryLabel}`,
       subtitle: `要点 ${target.bulletIndex + 1}`,
     };
   }

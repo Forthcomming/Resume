@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { AIModal } from "./AIModal";
 import { EditorTopBar } from "./EditorTopBar";
 import { JDTailorEntry } from "./JDTailorEntry";
+import { ModularExperienceSection } from "./ModularExperienceSection";
 import { ResumePreview } from "./ResumePreview";
 import { SectionEditorCard } from "./SectionEditorCard";
 import { useResumeAIEdit } from "./hooks/useResumeAIEdit";
@@ -98,8 +99,30 @@ export function ResumeEditor({
           <div className="min-h-0 flex-1 space-y-4 overflow-auto p-5">
             {orderedSections.map((section, index) => {
               const sectionId = section.id as SectionId;
+              if (sectionId === "work" || sectionId === "project") {
+                return (
+                  <ModularExperienceSection
+                    key={sectionId}
+                    sectionId={sectionId}
+                    title={versions.getDisplayTitle(sectionId)}
+                    defaultTitle={DEFAULT_SECTION_LABELS[sectionId]}
+                    onTitleChange={(nextTitle) => versions.updateSectionTitle(sectionId, nextTitle)}
+                    store={store}
+                    updateStore={versions.updateStore}
+                    dateDisplayFormat={versions.dateDisplayFormat}
+                    onDateDisplayFormatChange={versions.updateDateDisplayFormat}
+                    bulletAIOpen={ai.bulletAIOpen}
+                    onToggleBulletAI={ai.toggleBulletAI}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < orderedSections.length - 1}
+                    onMoveUp={() => versions.moveSection(sectionId, -1)}
+                    onMoveDown={() => versions.moveSection(sectionId, 1)}
+                  />
+                );
+              }
               const bulletOpenForSection =
-                ai.bulletAIOpen?.sectionId === section.id
+                ai.bulletAIOpen?.sectionId === section.id &&
+                "entryIndex" in ai.bulletAIOpen
                   ? ai.bulletAIOpen
                   : null;
 
@@ -143,11 +166,12 @@ export function ResumeEditor({
                       : null
                   }
                   onToggleBulletAI={(entryIndex, bulletIndex) =>
-                    ai.toggleBulletAI(
-                      sectionId as "work" | "project" | "education",
+                    ai.toggleBulletAI({
+                      scope: "bullet",
+                      sectionId: "education",
                       entryIndex,
-                      bulletIndex
-                    )
+                      bulletIndex,
+                    })
                   }
                   dateDisplayFormat={versions.dateDisplayFormat}
                   onDateDisplayFormatChange={versions.updateDateDisplayFormat}

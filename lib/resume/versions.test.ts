@@ -53,6 +53,43 @@ describe("section version store migration", () => {
     expect(store.sections.summary.versions[0].name).toBe("数据产品版");
   });
 
+  it("migrates section-level work versions into stable entry versions", () => {
+    const work = {
+      company: "示例科技",
+      title: "产品实习生",
+      location: "北京",
+      startDate: "2025-01",
+      endDate: "2025-06",
+      bullets: ["负责需求分析"],
+    };
+    const base = initSectionSubVersionsStore({
+      ...content,
+      work: { entries: [work] },
+    });
+    const v1 = {
+      schemaVersion: 1,
+      sectionOrder: base.sectionOrder,
+      sectionTitles: {},
+      sections: {
+        ...base.sections,
+        work: {
+          activeVersionId: "product",
+          versions: [
+            { id: "product", name: "产品侧", createdAt: "2026-01-01", createdBy: "user", content: { entries: [work] } },
+            { id: "data", name: "数据侧", createdAt: "2026-01-02", createdBy: "user", content: { entries: [{ ...work, bullets: ["搭建用户漏斗"] }] } },
+          ],
+        },
+      },
+    };
+    const first = parseSectionSubVersionsStore(v1);
+    const second = parseSectionSubVersionsStore(v1);
+    expect(first?.schemaVersion).toBe(2);
+    expect(first?.entrySections.work.order).toEqual(second?.entrySections.work.order);
+    const entryId = first?.entrySections.work.order[0] ?? "";
+    expect(first?.entrySections.work.entries[entryId].versions.map((item) => item.name)).toEqual(["产品侧", "数据侧"]);
+    expect(composeFromSectionSubVersions(first!).work.entries[0].bullets).toEqual(["负责需求分析"]);
+  });
+
   it("repairs incomplete duplicate order and drops deprecated density", () => {
     const base = initSectionSubVersionsStore(content);
     const store = sanitizeSectionSubVersionsStore({

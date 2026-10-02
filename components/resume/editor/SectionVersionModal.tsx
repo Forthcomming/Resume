@@ -116,7 +116,7 @@ export function SectionVersionModal({
             </h2>
             <p className="mt-1.5 text-[12px] leading-relaxed text-ink-muted">
               为「{sectionTitle}」准备多套内容，投递不同岗位时切换使用。
-              <span className="text-ink-soft"> 仅替换本板块，其他板块和预览其余部分不变。</span>
+              <span className="text-ink-soft"> 仅替换当前内容模块，简历其他部分不变。</span>
             </p>
           </div>
           <button

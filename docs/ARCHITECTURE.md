@@ -95,13 +95,15 @@ docs/                      # PRD、设计系统、本架构
 
 （`types/resume.ts` 里若仍有 `awards` / `custom`，属 PRD 残留，编辑器未实现。）
 
-### 5.3 板块子版本
+### 5.3 板块与经历版本
 
-`SectionSubVersionsStore`（见 `lib/resume/versions.ts`）：
+`SectionSubVersionsStore` v2（见 `lib/resume/versions.ts`）：
 
-- 每板块：`activeVersionId` + `versions[]`
+- 工作、项目：稳定经历 ID、启用状态、顺序以及每段经历独立的表达版本
+- 工作共享公司/地点/时间，版本控制职位与 Bullet；项目共享名称/时间/链接，版本控制角色、技术标签与 Bullet
+- 其他板块：`activeVersionId` + `versions[]`
 - 另含 `sectionOrder`、`sectionTitles`、日期格式等编辑偏好（预览为固定校招版式，无密度三档）
-- `content` 为当前激活版本合成快照；旧整份 snapshot 仅迁移用
+- `content` 为已启用经历和当前版本合成的平面快照；v1 板块版本与旧整份 snapshot 仅迁移用
 
 ## 6. API
 
@@ -118,7 +120,7 @@ docs/                      # PRD、设计系统、本架构
 
 - **Parse / Edit / JD-check / JD-plan**：均通过 `deepseek-client.ts` 处理鉴权、超时、HTTP 与 JSON；各功能提示词和业务校验保留在独立模块。
 - **客户端**：`client-edit.ts`、`client-jd-check.ts`、`client-jd-plan.ts`；Key 存 localStorage（设置页 / 门禁可 skip）。
-- **JD-plan**：输出要求、证据与动作；创建时再次校验母版指纹，云端和本地模式都生成独立副本，不保存 JD 分析历史。
+- **JD-plan**：输出要求、具体经历/版本证据与启用、隐藏、切换版本、Bullet 改写动作；创建时再次校验母版指纹，云端和本地模式都生成独立副本，不保存 JD 分析历史。
 
 ## 8. 导出
 

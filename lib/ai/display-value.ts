@@ -7,7 +7,7 @@ export function extractAIEditDisplayValue(
 ): unknown {
   if (target.scope === "bullet" && value && typeof value === "object") {
     const entries = (value as { entries?: unknown[] }).entries;
-    const entry = entries?.[target.entryIndex] as
+    const entry = entries?.["entryIndex" in target ? target.entryIndex : 0] as
       | { bullets?: string[]; notes?: string[] }
       | undefined;
     if (entry) {

@@ -10,17 +10,14 @@ import { emptyResumeContent, type ResumeContent } from "@/lib/resume/content";
 import {
   getActiveSectionContent,
   getSectionDisplayTitle,
+  updateActiveEntryVersionContent,
   updateActiveSectionContent,
   type SectionId,
   type SectionSubVersionsStore,
 } from "@/lib/resume/versions";
 import type { EditTarget, PendingAIEdit } from "@/types/ai-edit";
 
-type BulletAITarget = {
-  sectionId: "work" | "project" | "education";
-  entryIndex: number;
-  bulletIndex: number;
-};
+type BulletAITarget = Extract<EditTarget, { scope: "bullet" }>;
 
 interface UseResumeAIEditOptions {
   store: SectionSubVersionsStore | null;
@@ -44,11 +41,7 @@ export interface UseResumeAIEditResult {
   pendingAIEdit: PendingAIEdit | null;
   aiModalMeta: AIModalMeta | null;
   toggleSectionAI: (sectionId: SectionId) => void;
-  toggleBulletAI: (
-    sectionId: BulletAITarget["sectionId"],
-    entryIndex: number,
-    bulletIndex: number
-  ) => void;
+  toggleBulletAI: (target: BulletAITarget) => void;
   runAIEdit: (target: EditTarget, instruction: string) => Promise<void>;
   submitAIEdit: (instruction: string) => void;
   acceptAIEdit: () => void;
@@ -72,13 +65,18 @@ export function useResumeAIEdit({
     async (target: EditTarget, instruction: string) => {
       if (!store) return;
       const sectionId = target.sectionId;
-      const slice = getEditSlice(
-        {
-          ...composedContent,
-          [sectionId]: getActiveSectionContent(store, sectionId),
-        },
-        target
-      );
+      let slice: unknown;
+      if (target.scope === "bullet" && "entryId" in target) {
+        const entry = store.entrySections[target.sectionId].entries[target.entryId];
+        const version = entry?.versions.find((item) => item.id === target.entryVersionId);
+        if (!entry || !version) return;
+        slice = { entries: [{ ...entry.facts, ...version.content }] };
+      } else {
+        slice = getEditSlice(
+          { ...composedContent, [sectionId]: getActiveSectionContent(store, sectionId) },
+          target
+        );
+      }
       setPendingAIEdit({
         target,
         instruction,
@@ -113,6 +111,20 @@ export function useResumeAIEdit({
     if (!pendingAIEdit || !store || pendingAIEdit.status !== "ready") return;
     const { target, suggested } = pendingAIEdit;
     const sectionId = target.sectionId;
+    if (target.scope === "bullet" && "entryId" in target) {
+      const suggestedEntry = (suggested as { entries?: unknown[] })?.entries?.[0];
+      if (!suggestedEntry || typeof suggestedEntry !== "object") return;
+      const row = suggestedEntry as Record<string, unknown>;
+      const content = target.sectionId === "work"
+        ? { title: String(row.title ?? ""), bullets: Array.isArray(row.bullets) ? row.bullets.map(String) : [] }
+        : { role: String(row.role ?? ""), techStack: Array.isArray(row.techStack) ? row.techStack.map(String) : [], bullets: Array.isArray(row.bullets) ? row.bullets.map(String) : [] };
+      updateStore((value) =>
+        updateActiveEntryVersionContent(value, target.sectionId, target.entryId, content)
+      );
+      setPendingAIEdit(null);
+      setBulletAIOpen(null);
+      return;
+    }
     const currentSection = {
       ...emptyResumeContent(),
       [sectionId]: getActiveSectionContent(store, sectionId),
@@ -143,27 +155,18 @@ export function useResumeAIEdit({
     });
   }, []);
   const toggleBulletAI = useCallback(
-    (
-      sectionId: BulletAITarget["sectionId"],
-      entryIndex: number,
-      bulletIndex: number
-    ) => {
-      const isSame =
-        bulletAIOpen?.sectionId === sectionId &&
-        bulletAIOpen.entryIndex === entryIndex &&
-        bulletAIOpen.bulletIndex === bulletIndex;
+    (target: BulletAITarget) => {
+      const isSame = JSON.stringify(bulletAIOpen) === JSON.stringify(target);
       if (!isSame) setPendingAIEdit(null);
-      setBulletAIOpen(
-        isSame ? null : { sectionId, entryIndex, bulletIndex }
-      );
-      setAiOpenSections((previous) => ({ ...previous, [sectionId]: false }));
+      setBulletAIOpen(isSame ? null : target);
+      setAiOpenSections((previous) => ({ ...previous, [target.sectionId]: false }));
     },
     [bulletAIOpen]
   );
   const submitAIEdit = useCallback(
     (instruction: string) => {
       if (bulletAIOpen) {
-        void runAIEdit({ scope: "bullet", ...bulletAIOpen }, instruction);
+        void runAIEdit(bulletAIOpen, instruction);
         return;
       }
       const sectionId = Object.entries(aiOpenSections).find(
@@ -188,7 +191,7 @@ export function useResumeAIEdit({
     if (!store) return null;
     let target: EditTarget | null = null;
     if (pendingAIEdit) target = pendingAIEdit.target;
-    else if (bulletAIOpen) target = { scope: "bullet", ...bulletAIOpen };
+    else if (bulletAIOpen) target = bulletAIOpen;
     else {
       const sectionId = Object.entries(aiOpenSections).find(
         ([, open]) => open
@@ -199,15 +202,17 @@ export function useResumeAIEdit({
 
     const sectionTitle = getSectionDisplayTitle(store, target.sectionId);
     const { title, subtitle } = describeAIEditTarget(target, sectionTitle);
-    const originalContent =
-      pendingAIEdit?.original ??
-      getEditSlice(
-        {
-          ...composedContent,
-          [target.sectionId]: getActiveSectionContent(store, target.sectionId),
-        },
+    let originalContent = pendingAIEdit?.original;
+    if (originalContent === undefined && target.scope === "bullet" && "entryId" in target) {
+      const entry = store.entrySections[target.sectionId].entries[target.entryId];
+      const version = entry?.versions.find((item) => item.id === target.entryVersionId);
+      originalContent = entry && version ? { entries: [{ ...entry.facts, ...version.content }] } : "";
+    } else if (originalContent === undefined) {
+      originalContent = getEditSlice(
+        { ...composedContent, [target.sectionId]: getActiveSectionContent(store, target.sectionId) },
         target
       );
+    }
     return {
       target,
       title,

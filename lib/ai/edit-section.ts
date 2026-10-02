@@ -30,7 +30,8 @@ function buildSystemPrompt(target: EditTarget): string {
 
   let scopeHint = "";
   if (target.scope === "bullet") {
-    scopeHint = `仅优化第 ${target.entryIndex + 1} 条经历中的第 ${target.bulletIndex + 1} 条 bullet，保持其他条目不变。`;
+    const entryPosition = "entryIndex" in target ? target.entryIndex + 1 : 1;
+    scopeHint = `仅优化第 ${entryPosition} 条经历中的第 ${target.bulletIndex + 1} 条 bullet，保持其他条目不变。`;
   } else if (target.scope === "field") {
     scopeHint = `仅优化字段 "${target.field}"，保持其他字段不变。`;
   } else {

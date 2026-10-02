@@ -1,4 +1,4 @@
-import type { SectionId } from "@/types/ai-edit";
+import type { EntrySectionId, StandardSectionId } from "@/lib/resume/versions";
 
 export type JdCoverage = "covered" | "weak" | "missing";
 export type JdImportance = "core" | "bonus";
@@ -11,48 +11,18 @@ export interface JdRequirement {
   coverage: JdCoverage;
 }
 
-export interface ResumeEvidence {
-  id: string;
-  requirementId: string;
-  sectionId: SectionId;
-  versionId: string;
-  versionName: string;
-  entryIndex?: number;
-  bulletIndex?: number;
-  text: string;
-  reason: string;
-  isActive: boolean;
-}
+export type ResumeEvidence =
+  | { id: string; source: "entry"; requirementId: string; sectionId: EntrySectionId; entryId: string; entryVersionId: string; entryLabel: string; versionName: string; bulletIndex: number; text: string; reason: string; isActive: boolean; isEnabled: boolean }
+  | { id: string; source: "section"; requirementId: string; sectionId: StandardSectionId; versionId: string; versionName: string; entryIndex?: number; bulletIndex?: number; text: string; reason: string; isActive: boolean };
+
+interface ActionBase { id: string; reason: string; requirementIds: string[] }
 
 export type JdRecommendationAction =
-  | {
-      id: string;
-      type: "keep";
-      sectionId: SectionId;
-      versionId: string;
-      reason: string;
-    }
-  | {
-      id: string;
-      type: "switch_version";
-      sectionId: SectionId;
-      fromVersionId: string;
-      toVersionId: string;
-      reason: string;
-      requirementIds: string[];
-    }
-  | {
-      id: string;
-      type: "rewrite_bullet";
-      sectionId: "work" | "project" | "education";
-      versionId: string;
-      entryIndex: number;
-      bulletIndex: number;
-      original: string;
-      suggested: string;
-      reason: string;
-      requirementIds: string[];
-    };
+  | (ActionBase & { type: "set_entry_enabled"; sectionId: EntrySectionId; entryId: string; enabled: boolean })
+  | (ActionBase & { type: "switch_entry_version"; sectionId: EntrySectionId; entryId: string; fromVersionId: string; toVersionId: string })
+  | (ActionBase & { type: "rewrite_entry_bullet"; sectionId: EntrySectionId; entryId: string; versionId: string; bulletIndex: number; original: string; suggested: string })
+  | (ActionBase & { type: "switch_section_version"; sectionId: StandardSectionId; fromVersionId: string; toVersionId: string })
+  | (ActionBase & { type: "rewrite_education_bullet"; sectionId: "education"; versionId: string; entryIndex: number; bulletIndex: number; original: string; suggested: string });
 
 export interface JdAdaptationPlan {
   sourceFingerprint: string;
@@ -60,11 +30,7 @@ export interface JdAdaptationPlan {
   companyName: string;
   requirements: JdRequirement[];
   evidence: ResumeEvidence[];
-  targetVersionBySection: Partial<Record<SectionId, string>>;
   actions: JdRecommendationAction[];
 }
 
-export interface SelectedTailoringActions {
-  switchActionIds: string[];
-  rewriteActionIds: string[];
-}
+export interface SelectedTailoringActions { actionIds: string[] }

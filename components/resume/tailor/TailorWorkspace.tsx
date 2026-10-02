@@ -54,12 +54,12 @@ const COVERAGE_STYLE = {
 
 function getSuggestedBullet(
   suggested: unknown,
-  action: Extract<JdRecommendationAction, { type: "rewrite_bullet" }>
+  action: Extract<JdRecommendationAction, { type: "rewrite_entry_bullet" }>
 ): string | null {
   if (!suggested || typeof suggested !== "object") return null;
   const entries = (suggested as { entries?: unknown }).entries;
   if (!Array.isArray(entries)) return null;
-  const entry = entries[action.entryIndex] as
+  const entry = entries[0] as
     | { bullets?: unknown; notes?: unknown }
     | undefined;
   const items = Array.isArray(entry?.bullets)
@@ -90,8 +90,7 @@ export function TailorWorkspace({
   const [jobDescription, setJobDescription] = useState("");
   const [plan, setPlan] = useState<JdAdaptationPlan | null>(null);
   const [selected, setSelected] = useState<SelectedTailoringActions>({
-    switchActionIds: [],
-    rewriteActionIds: [],
+    actionIds: [],
   });
   const [outputTitle, setOutputTitle] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,12 +109,8 @@ export function TailorWorkspace({
     setHydrated(true);
   }, [initialContent, resumeId]);
 
-  const selectableActions = useMemo(
-    () => plan?.actions.filter((action) => action.type !== "keep") ?? [],
-    [plan]
-  );
-  const selectedCount =
-    selected.switchActionIds.length + selected.rewriteActionIds.length;
+  const selectableActions = useMemo(() => plan?.actions ?? [], [plan]);
+  const selectedCount = selected.actionIds.length;
 
   const generatePlan = async () => {
     if (!content || !store || loading) return;
@@ -140,11 +135,11 @@ export function TailorWorkspace({
       });
       setPlan(result);
       setSelected({
-        switchActionIds: result.actions
-          .filter((action) => action.type === "switch_version")
-          .map((action) => action.id),
-        rewriteActionIds: result.actions
-          .filter((action) => action.type === "rewrite_bullet")
+        actionIds: result.actions
+          .filter(
+            (action) =>
+              action.type !== "set_entry_enabled" || action.enabled
+          )
           .map((action) => action.id),
       });
       setOutputTitle(defaultTailoredResumeTitle(companyName, jobTitle));
@@ -156,27 +151,49 @@ export function TailorWorkspace({
   };
 
   const toggleAction = (action: JdRecommendationAction) => {
-    if (action.type === "keep") return;
-    const key =
-      action.type === "switch_version"
-        ? "switchActionIds"
-        : "rewriteActionIds";
-    setSelected((current) => ({
-      ...current,
-      [key]: current[key].includes(action.id)
-        ? current[key].filter((id) => id !== action.id)
-        : [...current[key], action.id],
-    }));
+    setSelected((current) => {
+      if (current.actionIds.includes(action.id)) {
+        return { actionIds: current.actionIds.filter((id) => id !== action.id) };
+      }
+      let actionIds = current.actionIds;
+      if (action.type === "set_entry_enabled" && !action.enabled) {
+        const conflicts = new Set(
+          plan?.actions
+            .filter(
+              (item) =>
+                "entryId" in item &&
+                item.entryId === action.entryId &&
+                item.id !== action.id
+            )
+            .map((item) => item.id) ?? []
+        );
+        actionIds = actionIds.filter((id) => !conflicts.has(id));
+      } else if ("entryId" in action) {
+        const hideIds = new Set(
+          plan?.actions
+            .filter(
+              (item) =>
+                item.type === "set_entry_enabled" &&
+                !item.enabled &&
+                item.entryId === action.entryId
+            )
+            .map((item) => item.id) ?? []
+        );
+        actionIds = actionIds.filter((id) => !hideIds.has(id));
+      }
+      return { actionIds: [...actionIds, action.id] };
+    });
   };
 
   const retryRewrite = async (
-    action: Extract<JdRecommendationAction, { type: "rewrite_bullet" }>
+    action: Extract<JdRecommendationAction, { type: "rewrite_entry_bullet" }>
   ) => {
     if (!store || retryingId) return;
-    const version = store.sections[action.sectionId].versions.find(
+    const entry = store.entrySections[action.sectionId].entries[action.entryId];
+    const version = entry?.versions.find(
       (item) => item.id === action.versionId
     );
-    if (!version) return;
+    if (!entry || !version) return;
     setRetryingId(action.id);
     setError("");
     try {
@@ -184,10 +201,11 @@ export function TailorWorkspace({
         {
           scope: "bullet",
           sectionId: action.sectionId,
-          entryIndex: action.entryIndex,
+          entryId: action.entryId,
+          entryVersionId: action.versionId,
           bulletIndex: action.bulletIndex,
         },
-        version.content,
+        { entries: [{ ...entry.facts, ...version.content }] },
         `针对${jobTitle}岗位重新改写这条经历。目标：${action.reason}。只使用原文已有事实与数据，不得虚构。`
       );
       const suggestion = getSuggestedBullet(result.suggested, action);
@@ -197,7 +215,7 @@ export function TailorWorkspace({
           ? {
               ...current,
               actions: current.actions.map((item) =>
-                item.id === action.id && item.type === "rewrite_bullet"
+                item.id === action.id && item.type === "rewrite_entry_bullet"
                   ? { ...item, suggested: suggestion }
                   : item
               ),
@@ -354,7 +372,7 @@ export function TailorWorkspace({
                         </div>
                         {evidence.length ? (
                           <div className="mt-3 space-y-2 border-t border-ink-soft/10 pt-3">
-                            {evidence.map((item) => <div key={item.id} className="flex gap-2 text-xs leading-relaxed"><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-600" /><p><span className="font-medium text-ink">{DEFAULT_SECTION_LABELS[item.sectionId]} · {item.versionName}</span><span className="text-ink-muted">：{item.text}</span></p></div>)}
+                            {evidence.map((item) => <div key={item.id} className="flex gap-2 text-xs leading-relaxed"><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-600" /><p><span className="font-medium text-ink">{DEFAULT_SECTION_LABELS[item.sectionId]}{item.source === "entry" ? ` · ${item.entryLabel}` : ""} · {item.versionName}</span><span className="text-ink-muted">：{item.text}</span></p></div>)}
                           </div>
                         ) : <p className="mt-3 border-t border-ink-soft/10 pt-3 text-xs text-ink-muted">当前简历中没有足够证据；不会建议凭空补写。</p>}
                       </article>
@@ -367,17 +385,26 @@ export function TailorWorkspace({
                 <div className="mb-1 flex items-center gap-2"><Sparkles size={17} /><h2 className="font-semibold text-ink">2. 推荐动作</h2></div>
                 <p className="mb-4 text-xs text-ink-muted">勾选你认可的调整。只有勾选项会写入新副本。</p>
                 {selectableActions.length ? <div className="space-y-3">{selectableActions.map((action) => {
-                  const checked = action.type === "switch_version" ? selected.switchActionIds.includes(action.id) : selected.rewriteActionIds.includes(action.id);
+                  const checked = selected.actionIds.includes(action.id);
+                  const entry = "entryId" in action ? store.entrySections[action.sectionId].entries[action.entryId] : null;
+                  const label = entry ? ("company" in entry.facts ? entry.facts.company : entry.facts.name) : "";
+                  const isRewrite = action.type === "rewrite_entry_bullet" || action.type === "rewrite_education_bullet";
+                  const title = action.type === "set_entry_enabled"
+                    ? `${action.enabled ? "启用" : "隐藏"}经历「${label || "未命名经历"}」`
+                    : action.type === "switch_entry_version"
+                      ? `切换「${label || "未命名经历"}」的版本`
+                      : action.type === "switch_section_version"
+                        ? `切换${DEFAULT_SECTION_LABELS[action.sectionId]}版本`
+                        : `改写${DEFAULT_SECTION_LABELS[action.sectionId]} Bullet`;
                   return (
                     <article key={action.id} className={clsx("rounded-2xl border p-4 transition", checked ? "border-ink/20 bg-white/80" : "border-ink-soft/10 bg-white/35")}>
                       <div className="flex items-start gap-3">
                         <button type="button" onClick={() => toggleAction(action)} className={clsx("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border", checked ? "border-ink bg-ink text-white" : "border-ink-soft/30 bg-white")} aria-label={checked ? "取消此调整" : "选择此调整"}>{checked ? <Check size={13} /> : null}</button>
                         <div className="min-w-0 flex-1">
-                          {action.type === "switch_version" ? (
-                            <><p className="text-sm font-semibold text-ink">切换{DEFAULT_SECTION_LABELS[action.sectionId]}版本</p><div className="mt-2 flex items-center gap-2 text-xs text-ink-muted"><span className="rounded-lg bg-slate-100 px-2 py-1">当前版本</span><ArrowRight size={13} /><span className="rounded-lg bg-blue-50 px-2 py-1 font-medium text-blue-700">{store.sections[action.sectionId].versions.find((item) => item.id === action.toVersionId)?.name ?? "推荐版本"}</span></div></>
-                          ) : (
-                            <><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-ink">改写{DEFAULT_SECTION_LABELS[action.sectionId]} Bullet</p><button type="button" onClick={() => void retryRewrite(action)} disabled={Boolean(retryingId)} className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink disabled:opacity-50"><RefreshCw size={12} className={retryingId === action.id ? "animate-spin" : ""} />换一个</button></div><div className="mt-3 grid gap-2"><div className="rounded-xl bg-red-50/70 px-3 py-2 text-xs leading-relaxed text-slate-600"><span className="mr-2 font-medium text-red-600">原</span>{action.original}</div><div className="rounded-xl bg-emerald-50/80 px-3 py-2 text-xs leading-relaxed text-slate-700"><span className="mr-2 font-medium text-emerald-700">新</span>{action.suggested}</div></div></>
-                          )}
+                          <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-ink">{title}</p>{action.type === "rewrite_entry_bullet" ? <button type="button" onClick={() => void retryRewrite(action)} disabled={Boolean(retryingId)} className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink disabled:opacity-50"><RefreshCw size={12} className={retryingId === action.id ? "animate-spin" : ""} />换一个</button> : null}</div>
+                          {action.type === "switch_entry_version" ? <div className="mt-2 flex items-center gap-2 text-xs text-ink-muted"><span className="rounded-lg bg-slate-100 px-2 py-1">当前版本</span><ArrowRight size={13} /><span className="rounded-lg bg-blue-50 px-2 py-1 font-medium text-blue-700">{entry?.versions.find((item) => item.id === action.toVersionId)?.name ?? "推荐版本"}</span></div> : null}
+                          {action.type === "switch_section_version" ? <div className="mt-2 flex items-center gap-2 text-xs text-ink-muted"><span className="rounded-lg bg-slate-100 px-2 py-1">当前版本</span><ArrowRight size={13} /><span className="rounded-lg bg-blue-50 px-2 py-1 font-medium text-blue-700">{store.sections[action.sectionId].versions.find((item) => item.id === action.toVersionId)?.name ?? "推荐版本"}</span></div> : null}
+                          {isRewrite && "original" in action ? <div className="mt-3 grid gap-2"><div className="rounded-xl bg-red-50/70 px-3 py-2 text-xs leading-relaxed text-slate-600"><span className="mr-2 font-medium text-red-600">原</span>{action.original}</div><div className="rounded-xl bg-emerald-50/80 px-3 py-2 text-xs leading-relaxed text-slate-700"><span className="mr-2 font-medium text-emerald-700">新</span>{action.suggested}</div></div> : null}
                           <p className="mt-2 text-xs leading-relaxed text-ink-muted">{action.reason}</p>
                         </div>
                       </div>
