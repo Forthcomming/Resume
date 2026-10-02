@@ -283,20 +283,17 @@ export function TailorWorkspace({
   return (
     <main className="min-h-screen pb-28">
       <header className="sticky top-0 z-20 border-b border-white/60 bg-[#edf3f9]/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <div className="relative mx-auto flex h-16 max-w-6xl items-center px-5">
           <Link
             href={`/resume/${resumeId}?title=${encodeURIComponent(sourceTitle)}`}
-            className="flex items-center gap-2 text-sm text-ink-muted transition hover:text-ink"
+            aria-label="返回简历编辑器"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-muted transition hover:bg-white/60 hover:text-ink"
           >
-            <ArrowLeft size={16} /> 返回母版
+            <ArrowLeft size={16} />
           </Link>
-          <div className="text-center">
+          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center">
             <p className="text-sm font-semibold text-ink">按 JD 生成定制版</p>
-            <p className="max-w-[45vw] truncate text-xs text-ink-muted">母版：{sourceTitle}</p>
           </div>
-          <span className="rounded-full bg-white/70 px-3 py-1 text-xs text-ink-muted ring-1 ring-white">
-            母版不会被修改
-          </span>
         </div>
       </header>
 
