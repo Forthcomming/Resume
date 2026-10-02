@@ -292,7 +292,7 @@ export function TailorWorkspace({
             <ArrowLeft size={16} />
           </Link>
           <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center">
-            <p className="text-sm font-semibold text-ink">按 JD 生成定制版</p>
+            <p className="text-sm font-semibold text-ink">JD定向修改简历</p>
           </div>
         </div>
       </header>
@@ -391,7 +391,6 @@ export function TailorWorkspace({
             <aside className="glass-panel sticky top-24 rounded-3xl p-5">
               <FilePlus2 size={20} className="text-ink" />
               <h2 className="mt-3 font-semibold text-ink">生成新的简历副本</h2>
-              <p className="mt-1 text-xs leading-relaxed text-ink-muted">保留母版和全部已有版本，仅在新副本中应用所选调整。</p>
               <label className="mt-5 block text-xs font-medium text-ink">新简历名称<input value={outputTitle} onChange={(event) => setOutputTitle(event.target.value)} className="glass-control mt-2 h-10 w-full rounded-xl px-3 text-sm outline-none focus:ring-2 focus:ring-ink/10" /></label>
               <div className="mt-4 rounded-2xl bg-white/55 p-3 text-xs text-ink-muted"><div className="flex justify-between"><span>推荐调整</span><span>{selectableActions.length} 项</span></div><div className="mt-2 flex justify-between font-medium text-ink"><span>将应用</span><span>{selectedCount} 项</span></div></div>
               <button type="button" onClick={() => void createCopy()} disabled={creating} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-semibold text-white hover:bg-[#26384a] disabled:opacity-60">{creating ? <Loader2 size={15} className="animate-spin" /> : <FilePlus2 size={15} />}{creating ? "正在创建…" : "创建定制版"}</button>
