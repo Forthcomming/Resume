@@ -3,6 +3,8 @@
 export type ResumeStyleCssVars = Record<`--resume-${string}`, string>;
 
 const CAMPUS_STYLE_TOKENS: ResumeStyleCssVars = {
+  "--resume-font-family":
+    "var(--font-outfit), var(--font-noto), system-ui, sans-serif",
   "--resume-pad-x": "8.5%",
   "--resume-pad-y": "5%",
   "--resume-name-size": "22px",

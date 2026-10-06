@@ -436,8 +436,9 @@ export function ResumePreview({
   const styleVars = resumeStyleCssVars();
 
   const sheetStyle = {
-    fontFamily:
-      "var(--font-noto), var(--font-outfit), system-ui, sans-serif" as const,
+    fontFamily: "var(--resume-font-family)" as const,
+    fontKerning: "normal" as const,
+    textRendering: "optimizeLegibility" as const,
     width: A4_WIDTH_CSS,
     ...styleVars,
   };
