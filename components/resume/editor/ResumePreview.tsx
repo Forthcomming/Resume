@@ -343,13 +343,7 @@ function BasicInfoHeader({
           className="absolute right-0 top-0 z-[1] h-[var(--resume-avatar-h)] w-[var(--resume-avatar-w)] object-cover"
         />
       ) : null}
-      <div
-        className={
-          hasAvatar
-            ? "pr-[calc(var(--resume-avatar-w)+0.85rem)]"
-            : undefined
-        }
-      >
+      <div>
         <h1 className="text-center text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight text-[#111]">
           {basic_info.name || "你的姓名"}
         </h1>
