@@ -17,8 +17,8 @@ const CAMPUS_STYLE_TOKENS: ResumeStyleCssVars = {
   "--resume-section-title-mb": "0.3rem",
   "--resume-header-gap": "0.3rem",
   /* ~证件照 3:4，右上角 */
-  "--resume-avatar-w": "4.5rem",
-  "--resume-avatar-h": "6rem",
+  "--resume-avatar-w": "3.6rem",
+  "--resume-avatar-h": "4.8rem",
 };
 
 export function resumeStyleCssVars(): ResumeStyleCssVars {
