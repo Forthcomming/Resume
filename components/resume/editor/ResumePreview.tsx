@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ResumeContent } from "@/lib/resume/content";
 import { A4_HEIGHT_CSS, A4_WIDTH_CSS } from "@/lib/resume/a4";
+import { calculateResumePageCount } from "@/lib/resume/pagination";
 import {
   DEFAULT_DATE_DISPLAY_FORMAT,
   formatDateRange,
@@ -480,8 +481,13 @@ export function ResumePreview({
         "[data-a4-page-probe]"
       ) as HTMLElement | null;
       const pageH = probe?.getBoundingClientRect().height || 1;
+      const rootRect = el.getBoundingClientRect();
+      const visibleContent = el.firstElementChild as HTMLElement | null;
+      const visibleContentBottom = visibleContent
+        ? visibleContent.getBoundingClientRect().bottom - rootRect.top
+        : el.scrollHeight;
       setPageHeightPx(pageH);
-      setPageCount(Math.max(1, Math.ceil(el.scrollHeight / pageH - 1e-6)));
+      setPageCount(calculateResumePageCount(visibleContentBottom, pageH));
     };
 
     measure();
