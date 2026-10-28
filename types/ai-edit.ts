@@ -19,11 +19,55 @@ export type EditTarget =
     }
   | { scope: "field"; sectionId: "summary"; field: "text" };
 
-export type PendingAIEdit = {
-  target: EditTarget;
-  instruction: string;
+export type AIEditAnswers = Record<string, string>;
+
+export type AIEditClarificationQuestion = {
+  id: string;
+  question: string;
+  placeholder?: string;
+};
+
+export type AIEditReadyResult = {
+  status: "ready";
   original: unknown;
   suggested: unknown;
-  status: "loading" | "ready" | "error";
-  error?: string;
+  improvements: string[];
 };
+
+export type AIEditNeedsInputResult = {
+  status: "needs_input";
+  original: unknown;
+  diagnosis: string;
+  questions: AIEditClarificationQuestion[];
+};
+
+export type AIEditResult = AIEditReadyResult | AIEditNeedsInputResult;
+
+export type PendingAIEdit =
+  | {
+      status: "analyzing";
+      target: EditTarget;
+      instruction: string;
+      original: unknown;
+    }
+  | ({
+      target: EditTarget;
+      instruction: string;
+    } & AIEditNeedsInputResult)
+  | {
+      status: "generating";
+      target: EditTarget;
+      instruction: string;
+      original: unknown;
+    }
+  | ({
+      target: EditTarget;
+      instruction: string;
+    } & AIEditReadyResult)
+  | {
+      status: "error";
+      target: EditTarget;
+      instruction: string;
+      original: unknown;
+      error: string;
+    };
