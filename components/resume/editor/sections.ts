@@ -47,7 +47,7 @@ export function getEditorSectionsInOrder(
 }
 
 export const AI_QUICK_PROMPTS = [
-  "量化数据，强化成果",
-  "精简表达，突出重点",
-  "针对产品岗优化",
+  "突出我的具体动作和结果",
+  "删除空话，提高信息密度",
+  "重组表达，但不要补写事实",
 ];

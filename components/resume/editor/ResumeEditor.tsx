@@ -215,6 +215,8 @@ export function ResumeEditor({
         pendingAIEdit={ai.pendingAIEdit}
         onClose={ai.closeAIEdit}
         onSubmit={ai.submitAIEdit}
+        onSubmitClarification={ai.submitAIClarification}
+        onSubmitConservative={ai.submitConservativeAIEdit}
         onAccept={ai.acceptAIEdit}
         onRetry={ai.rejectAIEdit}
         onDismissSuggestion={ai.closeAIEdit}

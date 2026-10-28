@@ -45,29 +45,37 @@ export type AIEditResult = AIEditReadyResult | AIEditNeedsInputResult;
 
 export type PendingAIEdit =
   | {
-      status: "analyzing";
+      status: "analyzing" | "generating";
       target: EditTarget;
       instruction: string;
       original: unknown;
+    }
+  /** @deprecated Kept for redcowork-demo path-alias compatibility. Prefer analyzing/generating. */
+  | {
+      status: "loading";
+      target: EditTarget;
+      instruction: string;
+      original: unknown;
+      suggested?: unknown;
+      error?: string;
     }
   | ({
       target: EditTarget;
       instruction: string;
     } & AIEditNeedsInputResult)
-  | {
-      status: "generating";
-      target: EditTarget;
-      instruction: string;
-      original: unknown;
-    }
   | ({
       target: EditTarget;
       instruction: string;
-    } & AIEditReadyResult)
+      status: "ready";
+      original: unknown;
+      suggested: unknown;
+      improvements?: string[];
+    })
   | {
       status: "error";
       target: EditTarget;
       instruction: string;
       original: unknown;
+      suggested?: unknown;
       error: string;
     };

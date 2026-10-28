@@ -6,9 +6,13 @@ import { Sparkles, X } from "lucide-react";
 import { AIInlinePrompt } from "./AIInlinePrompt";
 import { AIDiffView } from "./AIDiffView";
 import { AIOriginalPanel } from "./AIOriginalPanel";
+import { AIClarificationForm } from "./AIClarificationForm";
 import { formatAIEditDisplayValue } from "@/lib/ai/display-value";
-import type { EditTarget } from "@/types/ai-edit";
-import type { PendingAIEdit } from "@/types/ai-edit";
+import type {
+  AIEditAnswers,
+  EditTarget,
+  PendingAIEdit,
+} from "@/types/ai-edit";
 
 interface AIModalProps {
   open: boolean;
@@ -20,6 +24,8 @@ interface AIModalProps {
   pendingAIEdit: PendingAIEdit | null;
   onClose: () => void;
   onSubmit: (instruction: string) => void;
+  onSubmitClarification: (answers: AIEditAnswers) => void;
+  onSubmitConservative: () => void;
   onAccept: () => void;
   onRetry: () => void;
   onDismissSuggestion: () => void;
@@ -35,6 +41,8 @@ export function AIModal({
   pendingAIEdit,
   onClose,
   onSubmit,
+  onSubmitClarification,
+  onSubmitConservative,
   onAccept,
   onRetry,
   onDismissSuggestion,
@@ -62,6 +70,9 @@ export function AIModal({
   const originalText = formatAIEditDisplayValue(target, originalContent);
   const showPrompt = !pendingAIEdit;
   const showDiff = pendingAIEdit?.status === "ready";
+  const showClarification = pendingAIEdit?.status === "needs_input";
+  const showAnalyzing = pendingAIEdit?.status === "analyzing";
+  const showGenerating = pendingAIEdit?.status === "generating";
 
   return createPortal(
     <div className="no-print fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -112,7 +123,7 @@ export function AIModal({
             AI 仅提供参考建议，不会自动修改您的简历。请对比原文与建议后，自行决定是否采纳。
           </p>
 
-          {!showDiff && (
+          {!showDiff && !showClarification && (
             <AIOriginalPanel text={originalText} compact={!!pendingAIEdit} />
           )}
 
@@ -125,18 +136,45 @@ export function AIModal({
             />
           )}
 
-          {pendingAIEdit?.status === "loading" && (
+          {showAnalyzing && (
             <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
               <Sparkles
                 size={28}
                 strokeWidth={1.5}
                 className="animate-pulse text-accent-ai"
               />
-              <p className="text-[13px] font-medium text-ink">AI 正在生成建议…</p>
+              <p className="text-[13px] font-medium text-ink">
+                AI 正在判断哪些信息足以支持改写…
+              </p>
+              <p className="text-[12px] text-ink-muted">
+                信息足够会直接生成；缺少关键事实时会先追问
+              </p>
+            </div>
+          )}
+
+          {showGenerating && (
+            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+              <Sparkles
+                size={28}
+                strokeWidth={1.5}
+                className="animate-pulse text-accent-ai"
+              />
+              <p className="text-[13px] font-medium text-ink">
+                AI 正在根据补充事实生成建议…
+              </p>
               <p className="text-[12px] text-ink-muted">
                 生成完成后将展示对比，由您决定是否采纳
               </p>
             </div>
+          )}
+
+          {showClarification && pendingAIEdit.status === "needs_input" && (
+            <AIClarificationForm
+              diagnosis={pendingAIEdit.diagnosis}
+              questions={pendingAIEdit.questions}
+              onSubmit={onSubmitClarification}
+              onConservative={onSubmitConservative}
+            />
           )}
 
           {pendingAIEdit?.status === "error" && (
@@ -152,15 +190,34 @@ export function AIModal({
             </div>
           )}
 
-          {showDiff && pendingAIEdit && (
-            <AIDiffView
-              variant="modal"
-              target={pendingAIEdit.target}
-              original={pendingAIEdit.original}
-              suggested={pendingAIEdit.suggested}
-              onAccept={onAccept}
-              onReject={onDismissSuggestion}
-            />
+          {showDiff && pendingAIEdit?.status === "ready" && (
+            <div className="space-y-3">
+              {(pendingAIEdit.improvements?.length ?? 0) > 0 && (
+                <div className="rounded-xl border border-accent-ai/15 bg-accent-ai/[0.05] px-3.5 py-3">
+                  <p className="mb-1.5 text-[11px] font-medium text-accent-ai">
+                    本次改进
+                  </p>
+                  <ul className="space-y-1">
+                    {(pendingAIEdit.improvements ?? []).map((item) => (
+                      <li
+                        key={item}
+                        className="text-[12px] leading-relaxed text-ink-soft"
+                      >
+                        · {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <AIDiffView
+                variant="modal"
+                target={pendingAIEdit.target}
+                original={pendingAIEdit.original}
+                suggested={pendingAIEdit.suggested}
+                onAccept={onAccept}
+                onReject={onDismissSuggestion}
+              />
+            </div>
           )}
         </div>
       </div>
