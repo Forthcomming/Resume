@@ -24,7 +24,7 @@ export function collectSafeBreakOffsets(root: HTMLElement): number[] {
   });
 
   offsets.add(root.scrollHeight);
-  return [...offsets].sort((a, b) => a - b);
+  return Array.from(offsets).sort((a, b) => a - b);
 }
 
 /**
@@ -45,7 +45,9 @@ export function planPdfPageSlices(
     return [{ startPx: 0, endPx: Math.max(1, contentHeightPx || 1) }];
   }
 
-  const breaks = [...new Set([0, ...safeBreaksPx, contentHeightPx])]
+  const breaks = Array.from(
+    new Set([0, ...safeBreaksPx, contentHeightPx])
+  )
     .filter((value) => Number.isFinite(value) && value >= 0)
     .sort((a, b) => a - b);
 
