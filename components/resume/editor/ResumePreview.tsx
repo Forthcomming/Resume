@@ -114,10 +114,14 @@ function BasicInfoPreviewLines({
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  // Keep the rule on a sibling bar — html2canvas often draws border-b through CJK glyphs.
   return (
-    <h2 className="mb-[var(--resume-section-title-mb)] border-b border-[#111] pb-0.5 text-[length:var(--resume-section-title-size)] font-bold leading-tight text-[#111]">
-      {children}
-    </h2>
+    <div className="mb-[var(--resume-section-title-mb)]">
+      <h2 className="text-[length:var(--resume-section-title-size)] font-bold leading-[1.55] text-[#111]">
+        {children}
+      </h2>
+      <div className="mt-1 h-px w-full bg-[#111]" aria-hidden />
+    </div>
   );
 }
 
@@ -127,7 +131,9 @@ function Bullets({ items }: { items: string[] }) {
   return (
     <ul className="mt-0.5 list-disc space-y-[0.12rem] pl-[1.1em] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
       {visible.map((b, i) => (
-        <li key={i}>{b}</li>
+        <li key={i} data-resume-break>
+          {b}
+        </li>
       ))}
     </ul>
   );
@@ -167,7 +173,7 @@ function SummaryBlock({
 }) {
   if (!content.text.trim()) return null;
   return (
-    <section>
+    <section data-resume-break>
       <SectionTitle>{title}</SectionTitle>
       <p className="whitespace-pre-wrap text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
         {content.text}
@@ -192,7 +198,7 @@ function WorkBlock({
       <SectionTitle>{title}</SectionTitle>
       <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
-          <div key={i}>
+          <div key={i} data-resume-break>
             <EntryMetaRow
               left={e.company || "—"}
               center={e.title}
@@ -227,7 +233,7 @@ function ProjectBlock({
       <SectionTitle>{title}</SectionTitle>
       <div className="flex flex-col gap-[var(--resume-entry-gap)]">
         {content.entries.map((e, i) => (
-          <div key={i}>
+          <div key={i} data-resume-break>
             <EntryMetaRow
               left={e.name || "—"}
               center={e.role}
@@ -267,7 +273,7 @@ function EducationBlock({
             .filter(Boolean)
             .join(" · ");
           return (
-            <div key={i}>
+            <div key={i} data-resume-break>
               <EntryMetaRow
                 left={
                   <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -314,6 +320,7 @@ function SkillsBlock({
         {content.categories.map((c, i) => (
           <p
             key={i}
+            data-resume-break
             className="text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]"
           >
             {c.label && <span className="font-semibold">{c.label}：</span>}
