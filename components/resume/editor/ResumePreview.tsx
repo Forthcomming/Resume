@@ -139,6 +139,16 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
+function EntrySummary({ text }: { text?: string }) {
+  const value = text?.trim();
+  if (!value) return null;
+  return (
+    <p className="mt-0.5 text-[length:var(--resume-body-size)] font-bold leading-[var(--resume-leading)] text-[#222]">
+      {value}
+    </p>
+  );
+}
+
 /** Campus three-column meta: left org · center role · right dates. */
 function EntryMetaRow({
   left,
@@ -209,6 +219,7 @@ function WorkBlock({
                 .filter(Boolean)
                 .join(" · ")}
             />
+            <EntrySummary text={e.summary} />
             <Bullets items={e.bullets} />
           </div>
         ))}
@@ -244,6 +255,7 @@ function ProjectBlock({
                 {e.techStack.join(" / ")}
               </p>
             )}
+            <EntrySummary text={e.summary} />
             <Bullets items={e.bullets} />
           </div>
         ))}
