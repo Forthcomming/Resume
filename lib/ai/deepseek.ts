@@ -14,9 +14,9 @@ const SYSTEM_PROMPT = `你是一个简历解析引擎。用户会给你一段从
   "content": {
     "basic_info": { "name": "", "email": "", "phone": "", "location": "", "avatar": "", "target_cities": "", "desired_position": "", "website": "", "wechat": "", "linkedin": "", "github": "", "gender": "", "height": "", "weight": "", "ethnicity": "", "native_place": "", "political_status": "", "marital_status": "", "birthday": "" },
     "summary": { "text": "个人简介/自我评价，没有则空字符串" },
-    "work": { "entries": [ { "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "bullets": ["职责或成就，每条一句"] } ] },
+    "work": { "entries": [ { "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "summary": "可选一句总述，可空", "bullets": ["职责或成就，每条一句"] } ] },
     "education": { "entries": [ { "school": "", "schoolTag": "", "major": "", "degree": "", "studyType": "", "college": "", "city": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM 或 present", "gpa": "", "notes": ["荣誉/课程"] } ] },
-    "project": { "entries": [ { "name": "", "role": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "techStack": ["技术名"], "link": "", "bullets": ["项目描述"] } ] },
+    "project": { "entries": [ { "name": "", "role": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "techStack": ["技术名"], "link": "", "summary": "可选一句总述，可空", "bullets": ["项目描述"] } ] },
     "skills": { "categories": [ { "label": "分类名，如 编程语言", "items": ["技能项"] } ] }
   }
 }
@@ -25,7 +25,8 @@ const SYSTEM_PROMPT = `你是一个简历解析引擎。用户会给你一段从
 - 只输出 JSON，不要任何解释、不要 markdown 代码块。
 - 日期尽量规范为 YYYY-MM；无法判断的保持原文或留空。
 - 不要编造原文没有的信息。
-- bullets / items 拆分为独立条目，去掉项目符号前缀。`;
+- bullets / items 拆分为独立条目，去掉项目符号前缀。
+- work/project 每条可有 summary：一句概括该段经历；bullets 不要重复放入该句；无总述则 summary 为 ""。`;
 
 interface ParseResult {
   title: string;

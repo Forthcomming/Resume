@@ -27,11 +27,11 @@ const SECTION_SCHEMA_HINTS: Record<string, string> = {
   basic_info:
     '{ "name": "", "email": "", "phone": "", "location": "", "avatar": "", "target_cities": "", "desired_position": "", "website": "", "wechat": "", "linkedin": "", "github": "", "gender": "", "height": "", "weight": "", "ethnicity": "", "native_place": "", "political_status": "", "marital_status": "", "birthday": "" }',
   summary: '{ "text": "" }',
-  work: '{ "entries": [{ "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM|present", "bullets": ["..."] }] }',
+  work: '{ "entries": [{ "company": "", "title": "", "location": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM|present", "summary": "", "bullets": ["..."] }] }',
   education:
     '{ "entries": [{ "school": "", "schoolTag": "985|211|双一流|海外 QS Top|普通本科", "major": "", "degree": "高中|专科|本科|硕士|博士", "studyType": "全日制|非全日制|在职|交换", "college": "", "city": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM|present", "gpa": "", "notes": ["..."] }] }',
   project:
-    '{ "entries": [{ "name": "", "role": "", "startDate": "", "endDate": "", "techStack": [""], "link": "", "bullets": ["..."] }] }',
+    '{ "entries": [{ "name": "", "role": "", "startDate": "", "endDate": "", "techStack": [""], "link": "", "summary": "", "bullets": ["..."] }] }',
   skills: '{ "categories": [{ "label": "", "items": ["..."] }] }',
 };
 
