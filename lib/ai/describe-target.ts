@@ -23,6 +23,13 @@ export function describeAIEditTarget(
       subtitle: `要点 ${target.bulletIndex + 1}`,
     };
   }
+  if (target.scope === "summary") {
+    const label = BULLET_SECTION_LABELS[target.sectionId] ?? sectionTitle;
+    return {
+      title: `AI 优化 · ${label}`,
+      subtitle: "总结句",
+    };
+  }
   if (target.scope === "field") {
     return { title: `AI 优化 · ${sectionTitle}` };
   }
@@ -38,6 +45,9 @@ export function aiPromptPlaceholder(
   }
   if (target.scope === "bullet") {
     return "例如：用成果导向重写、补上可量化影响、删掉空话";
+  }
+  if (target.scope === "summary") {
+    return "例如：更概括、突出成果、补一句总述";
   }
   return `例如：精炼「${sectionTitle}」、突出核心能力与成果、更贴目标岗位`;
 }

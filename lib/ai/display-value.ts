@@ -15,6 +15,11 @@ export function extractAIEditDisplayValue(
       return list[target.bulletIndex] ?? "";
     }
   }
+  if (target.scope === "summary" && value && typeof value === "object") {
+    const entries = (value as { entries?: unknown[] }).entries;
+    const entry = entries?.[0] as { summary?: string } | undefined;
+    return entry?.summary ?? "";
+  }
   if (target.scope === "field" && value && typeof value === "object") {
     return (value as Record<string, string>)[target.field] ?? "";
   }

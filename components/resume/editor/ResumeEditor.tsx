@@ -113,6 +113,8 @@ export function ResumeEditor({
                     onDateDisplayFormatChange={versions.updateDateDisplayFormat}
                     bulletAIOpen={ai.bulletAIOpen}
                     onToggleBulletAI={ai.toggleBulletAI}
+                    summaryAIOpen={ai.summaryAIOpen}
+                    onToggleSummaryAI={ai.toggleSummaryAI}
                     canMoveUp={index > 0}
                     canMoveDown={index < orderedSections.length - 1}
                     onMoveUp={() => versions.moveSection(sectionId, -1)}

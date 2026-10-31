@@ -16,8 +16,10 @@ import {
   getSectionDisplayTitle,
   updateActiveEntryVersionContent,
   updateActiveSectionContent,
+  type ProjectEntryVariant,
   type SectionId,
   type SectionSubVersionsStore,
+  type WorkEntryVariant,
 } from "@/lib/resume/versions";
 import type {
   AIEditAnswers,
@@ -26,6 +28,7 @@ import type {
 } from "@/types/ai-edit";
 
 type BulletAITarget = Extract<EditTarget, { scope: "bullet" }>;
+type SummaryAITarget = Extract<EditTarget, { scope: "summary" }>;
 
 interface UseResumeAIEditOptions {
   store: SectionSubVersionsStore | null;
@@ -46,10 +49,12 @@ interface AIModalMeta {
 export interface UseResumeAIEditResult {
   aiOpenSections: Record<string, boolean>;
   bulletAIOpen: BulletAITarget | null;
+  summaryAIOpen: SummaryAITarget | null;
   pendingAIEdit: PendingAIEdit | null;
   aiModalMeta: AIModalMeta | null;
   toggleSectionAI: (sectionId: SectionId) => void;
   toggleBulletAI: (target: BulletAITarget) => void;
+  toggleSummaryAI: (target: SummaryAITarget) => void;
   runAIEdit: (target: EditTarget, instruction: string) => Promise<void>;
   submitAIEdit: (instruction: string) => void;
   submitAIClarification: (answers: AIEditAnswers) => void;
@@ -58,6 +63,17 @@ export interface UseResumeAIEditResult {
   rejectAIEdit: () => void;
   closeAIEdit: () => void;
   optimizeSection: (sectionId: SectionId, instruction: string) => void;
+}
+
+function isEntryScopedTarget(
+  target: EditTarget
+): target is
+  | Extract<EditTarget, { scope: "bullet"; entryId: string }>
+  | SummaryAITarget {
+  return (
+    (target.scope === "bullet" || target.scope === "summary") &&
+    "entryId" in target
+  );
 }
 
 export function useResumeAIEdit({
@@ -69,13 +85,16 @@ export function useResumeAIEdit({
     {}
   );
   const [bulletAIOpen, setBulletAIOpen] = useState<BulletAITarget | null>(null);
+  const [summaryAIOpen, setSummaryAIOpen] = useState<SummaryAITarget | null>(
+    null
+  );
   const [pendingAIEdit, setPendingAIEdit] = useState<PendingAIEdit | null>(null);
 
   const resolveSlice = useCallback(
     (target: EditTarget): unknown | null => {
       if (!store) return null;
       const sectionId = target.sectionId;
-      if (target.scope === "bullet" && "entryId" in target) {
+      if (isEntryScopedTarget(target)) {
         const entry =
           store.entrySections[target.sectionId].entries[target.entryId];
         const version = entry?.versions.find(
@@ -192,14 +211,39 @@ export function useResumeAIEdit({
     if (!pendingAIEdit || !store || pendingAIEdit.status !== "ready") return;
     const { target, suggested } = pendingAIEdit;
     const sectionId = target.sectionId;
-    if (target.scope === "bullet" && "entryId" in target) {
+    if (isEntryScopedTarget(target)) {
       const suggestedEntry = (suggested as { entries?: unknown[] })?.entries?.[0];
       if (!suggestedEntry || typeof suggestedEntry !== "object") return;
       const row = suggestedEntry as Record<string, unknown>;
+      const entry =
+        store.entrySections[target.sectionId].entries[target.entryId];
+      const version =
+        entry?.versions.find((item) => item.id === target.entryVersionId) ??
+        entry?.versions.find((item) => item.id === entry.activeVersionId);
+      if (!version) return;
+
+      if (target.scope === "summary") {
+        const current = version.content as WorkEntryVariant | ProjectEntryVariant;
+        updateStore((value) =>
+          updateActiveEntryVersionContent(value, target.sectionId, target.entryId, {
+            ...current,
+            summary: String(row.summary ?? ""),
+          })
+        );
+        setPendingAIEdit(null);
+        setSummaryAIOpen(null);
+        setBulletAIOpen(null);
+        return;
+      }
+
+      const currentSummary = String(
+        (version.content as { summary?: string }).summary ?? ""
+      );
       const content =
         target.sectionId === "work"
           ? {
               title: String(row.title ?? ""),
+              summary: String(row.summary ?? currentSummary),
               bullets: Array.isArray(row.bullets)
                 ? row.bullets.map(String)
                 : [],
@@ -209,6 +253,7 @@ export function useResumeAIEdit({
               techStack: Array.isArray(row.techStack)
                 ? row.techStack.map(String)
                 : [],
+              summary: String(row.summary ?? currentSummary),
               bullets: Array.isArray(row.bullets)
                 ? row.bullets.map(String)
                 : [],
@@ -223,6 +268,7 @@ export function useResumeAIEdit({
       );
       setPendingAIEdit(null);
       setBulletAIOpen(null);
+      setSummaryAIOpen(null);
       return;
     }
     const currentSection = {
@@ -236,6 +282,7 @@ export function useResumeAIEdit({
     setPendingAIEdit(null);
     setAiOpenSections({});
     setBulletAIOpen(null);
+    setSummaryAIOpen(null);
   }, [pendingAIEdit, store, updateStore]);
 
   const rejectAIEdit = useCallback(() => setPendingAIEdit(null), []);
@@ -243,12 +290,14 @@ export function useResumeAIEdit({
     setPendingAIEdit(null);
     setAiOpenSections({});
     setBulletAIOpen(null);
+    setSummaryAIOpen(null);
   }, []);
   const toggleSectionAI = useCallback((sectionId: SectionId) => {
     setAiOpenSections((previous) => {
       const opening = !previous[sectionId];
       if (opening) {
         setBulletAIOpen(null);
+        setSummaryAIOpen(null);
         setPendingAIEdit(null);
       }
       return { ...previous, [sectionId]: opening };
@@ -259,6 +308,7 @@ export function useResumeAIEdit({
       const isSame = JSON.stringify(bulletAIOpen) === JSON.stringify(target);
       if (!isSame) setPendingAIEdit(null);
       setBulletAIOpen(isSame ? null : target);
+      setSummaryAIOpen(null);
       setAiOpenSections((previous) => ({
         ...previous,
         [target.sectionId]: false,
@@ -266,8 +316,25 @@ export function useResumeAIEdit({
     },
     [bulletAIOpen]
   );
+  const toggleSummaryAI = useCallback(
+    (target: SummaryAITarget) => {
+      const isSame = JSON.stringify(summaryAIOpen) === JSON.stringify(target);
+      if (!isSame) setPendingAIEdit(null);
+      setSummaryAIOpen(isSame ? null : target);
+      setBulletAIOpen(null);
+      setAiOpenSections((previous) => ({
+        ...previous,
+        [target.sectionId]: false,
+      }));
+    },
+    [summaryAIOpen]
+  );
   const submitAIEdit = useCallback(
     (instruction: string) => {
+      if (summaryAIOpen) {
+        void runAIEdit(summaryAIOpen, instruction);
+        return;
+      }
       if (bulletAIOpen) {
         void runAIEdit(bulletAIOpen, instruction);
         return;
@@ -279,11 +346,12 @@ export function useResumeAIEdit({
         void runAIEdit({ scope: "section", sectionId }, instruction);
       }
     },
-    [bulletAIOpen, aiOpenSections, runAIEdit]
+    [summaryAIOpen, bulletAIOpen, aiOpenSections, runAIEdit]
   );
   const optimizeSection = useCallback(
     (sectionId: SectionId, instruction: string) => {
       setBulletAIOpen(null);
+      setSummaryAIOpen(null);
       setAiOpenSections({ [sectionId]: true });
       void runAIEdit({ scope: "section", sectionId }, instruction);
     },
@@ -294,6 +362,7 @@ export function useResumeAIEdit({
     if (!store) return null;
     let target: EditTarget | null = null;
     if (pendingAIEdit) target = pendingAIEdit.target;
+    else if (summaryAIOpen) target = summaryAIOpen;
     else if (bulletAIOpen) target = bulletAIOpen;
     else {
       const sectionId = Object.entries(aiOpenSections).find(
@@ -308,8 +377,7 @@ export function useResumeAIEdit({
     let originalContent = pendingAIEdit?.original;
     if (
       originalContent === undefined &&
-      target.scope === "bullet" &&
-      "entryId" in target
+      isEntryScopedTarget(target)
     ) {
       const entry =
         store.entrySections[target.sectionId].entries[target.entryId];
@@ -336,15 +404,24 @@ export function useResumeAIEdit({
       placeholder: aiPromptPlaceholder(target, sectionTitle),
       originalContent,
     };
-  }, [store, pendingAIEdit, bulletAIOpen, aiOpenSections, composedContent]);
+  }, [
+    store,
+    pendingAIEdit,
+    summaryAIOpen,
+    bulletAIOpen,
+    aiOpenSections,
+    composedContent,
+  ]);
 
   return {
     aiOpenSections,
     bulletAIOpen,
+    summaryAIOpen,
     pendingAIEdit,
     aiModalMeta,
     toggleSectionAI,
     toggleBulletAI,
+    toggleSummaryAI,
     runAIEdit,
     submitAIEdit,
     submitAIClarification,

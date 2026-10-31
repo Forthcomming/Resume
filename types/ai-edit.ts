@@ -17,6 +17,12 @@ export type EditTarget =
       entryVersionId: string;
       bulletIndex: number;
     }
+  | {
+      scope: "summary";
+      sectionId: "work" | "project";
+      entryId: string;
+      entryVersionId: string;
+    }
   | { scope: "field"; sectionId: "summary"; field: "text" };
 
 export type AIEditAnswers = Record<string, string>;

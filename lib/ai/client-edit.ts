@@ -14,7 +14,8 @@ export function getEditSlice(
   if (
     target.scope === "section" ||
     target.scope === "field" ||
-    target.scope === "bullet"
+    target.scope === "bullet" ||
+    target.scope === "summary"
   ) {
     return content[target.sectionId];
   }
@@ -30,7 +31,8 @@ export function applyAIEdit(
   if (
     target.scope === "section" ||
     target.scope === "field" ||
-    target.scope === "bullet"
+    target.scope === "bullet" ||
+    target.scope === "summary"
   ) {
     return {
       ...content,

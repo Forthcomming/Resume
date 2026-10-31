@@ -80,6 +80,9 @@ function buildScopeHint(target: EditTarget): string {
     const entryPosition = "entryIndex" in target ? target.entryIndex + 1 : 1;
     return `仅优化第 ${entryPosition} 条经历中的第 ${target.bulletIndex + 1} 条 bullet，保持其他条目不变。`;
   }
+  if (target.scope === "summary") {
+    return "仅优化该经历的 summary（一句总述），保持 bullets 及其他字段不变。若 summary 为空，可基于同条 bullets 与职位/角色生成一句，不得虚构事实。";
+  }
   if (target.scope === "field") {
     return `仅优化字段 "${target.field}"，保持其他字段不变。`;
   }
