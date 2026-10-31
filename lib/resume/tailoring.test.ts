@@ -9,7 +9,7 @@ function fixture() {
   content.work.entries = [{ company: "示例科技", title: "产品实习生", location: "北京", startDate: "2025-01", endDate: "2025-06", bullets: ["负责产品需求分析"] }];
   let store = initSectionSubVersionsStore(content);
   const entryId = store.entrySections.work.order[0];
-  store = addEntryVersion(store, "work", entryId, "数据侧", { content: { title: "产品实习生", bullets: ["搭建用户行为漏斗"] } });
+  store = addEntryVersion(store, "work", entryId, "数据侧", { content: { title: "产品实习生", summary: "", bullets: ["搭建用户行为漏斗"] } });
   return { content, store, entryId, dataVersionId: store.entrySections.work.entries[entryId].activeVersionId };
 }
 

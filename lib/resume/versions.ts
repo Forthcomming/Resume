@@ -39,14 +39,14 @@ export type WorkEntryFacts = Pick<
   WorkEntry,
   "company" | "location" | "startDate" | "endDate"
 >;
-export type WorkEntryVariant = Pick<WorkEntry, "title" | "bullets">;
+export type WorkEntryVariant = Pick<WorkEntry, "title" | "summary" | "bullets">;
 export type ProjectEntryFacts = Pick<
   ProjectEntry,
   "name" | "startDate" | "endDate" | "link"
 >;
 export type ProjectEntryVariant = Pick<
   ProjectEntry,
-  "role" | "techStack" | "bullets"
+  "role" | "techStack" | "summary" | "bullets"
 >;
 
 export type EntryVersion<T> = SectionSubVersion<T>;
@@ -235,7 +235,11 @@ function splitWorkEntry(entry: WorkEntry): {
       startDate: entry.startDate,
       endDate: entry.endDate,
     },
-    variant: { title: entry.title, bullets: [...entry.bullets] },
+    variant: {
+      title: entry.title,
+      summary: entry.summary ?? "",
+      bullets: [...entry.bullets],
+    },
   };
 }
 
@@ -253,6 +257,7 @@ function splitProjectEntry(entry: ProjectEntry): {
     variant: {
       role: entry.role,
       techStack: [...entry.techStack],
+      summary: entry.summary ?? "",
       bullets: [...entry.bullets],
     },
   };

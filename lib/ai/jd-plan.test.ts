@@ -7,7 +7,7 @@ function fixture() {
   const content = emptyResumeContent();
   content.work.entries = [{ company: "示例科技", title: "产品实习生", location: "", startDate: "2025-01", endDate: "2025-06", bullets: ["负责需求分析"] }];
   let versionStore = initSectionSubVersionsStore(content); const entryId = versionStore.entrySections.work.order[0];
-  versionStore = addEntryVersion(versionStore, "work", entryId, "数据侧", { content: { title: "产品实习生", bullets: ["搭建用户漏斗"] } });
+  versionStore = addEntryVersion(versionStore, "work", entryId, "数据侧", { content: { title: "产品实习生", summary: "", bullets: ["搭建用户漏斗"] } });
   return { title: "主简历", content, versionStore, companyName: "示例", jobTitle: "数据产品经理", entryId, versionId: versionStore.entrySections.work.entries[entryId].activeVersionId };
 }
 

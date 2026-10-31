@@ -149,4 +149,23 @@ describe("section version operations", () => {
 
     expect(deleteSectionSubVersion(initial, "work", onlyId)).toBe(initial);
   });
+
+  it("round-trips work entry summary through compose", () => {
+    const content = emptyResumeContent();
+    content.work.entries = [
+      {
+        company: "示例",
+        title: "产品",
+        location: "",
+        startDate: "2025-01",
+        endDate: "2025-06",
+        summary: "负责增长方向体验",
+        bullets: ["完成改版"],
+      },
+    ];
+    const store = initSectionSubVersionsStore(content);
+    const composed = composeFromSectionSubVersions(store);
+    expect(composed.work.entries[0].summary).toBe("负责增长方向体验");
+    expect(composed.work.entries[0].bullets).toEqual(["完成改版"]);
+  });
 });
