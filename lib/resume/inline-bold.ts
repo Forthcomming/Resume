@@ -81,3 +81,63 @@ export function parseInlineBoldSegments(text: string): InlineBoldSegment[] {
   }
   return segments.length ? segments : [{ type: "text", value: text }];
 }
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Markdown (`**bold**`) → HTML for contentEditable. */
+export function markdownToEditableHtml(markdown: string): string {
+  if (!markdown) return "";
+  return escapeHtml(markdown)
+    .replace(/\n/g, "<br>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+function decodeBasicEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripTagsToText(html: string): string {
+  return decodeBasicEntities(
+    html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")
+  );
+}
+
+/**
+ * contentEditable HTML → markdown with `**bold**`.
+ * Handles strong/b, br, and simple div/p line breaks.
+ */
+export function editableHtmlToMarkdown(html: string): string {
+  if (!html || html === "<br>" || html === "<br/>") return "";
+
+  let s = html.replace(/\u00a0/g, " ").replace(/&nbsp;/gi, " ");
+  // Innermost bold first so nested <strong> flattens into one pair.
+  for (let i = 0; i < 8; i += 1) {
+    const next = s.replace(
+      /<(strong|b)(?:\s[^>]*)?>((?:(?!<\/(?:strong|b)>).)*)<\/\1>/gi,
+      (_full, _tag: string, inner: string) => {
+        const text = stripTagsToText(inner).replace(/\*\*/g, "");
+        return text ? `**${text}**` : "";
+      }
+    );
+    if (next === s) break;
+    s = next;
+  }
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+  s = s.replace(/<\/(?:div|p)>/gi, "\n");
+  s = s.replace(/<(?:div|p)(?:\s[^>]*)?>/gi, "");
+  s = stripTagsToText(s);
+  s = s.replace(/\n{3,}/g, "\n\n");
+  if (!s.replace(/\n/g, "").trim()) return "";
+  return s.replace(/\n+$/g, "");
+}

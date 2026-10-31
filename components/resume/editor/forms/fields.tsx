@@ -1,9 +1,9 @@
 "use client";
 
 import { Plus, Trash2, X, Sparkles, GripVertical } from "lucide-react";
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import clsx from "clsx";
-import { toggleInlineBoldMarkdown } from "@/lib/resume/inline-bold";
+import { RichTextInput } from "./RichTextInput";
 
 /** Shared chrome: always editable white; filled = stronger border + ink text. */
 export function fieldClass(filled: boolean, multiline = false) {
@@ -14,28 +14,6 @@ export function fieldClass(filled: boolean, multiline = false) {
       ? "border-ink-soft/25 text-ink"
       : "border-ink-soft/10 text-ink placeholder:text-ink-muted"
   );
-}
-
-function handleInlineBoldKeyDown(
-  event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-  value: string,
-  onChange: (next: string) => void
-) {
-  if (!(event.key === "b" || event.key === "B")) return;
-  if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) {
-    return;
-  }
-  event.preventDefault();
-  const el = event.currentTarget;
-  const result = toggleInlineBoldMarkdown(
-    value,
-    el.selectionStart ?? 0,
-    el.selectionEnd ?? 0
-  );
-  onChange(result.value);
-  requestAnimationFrame(() => {
-    el.setSelectionRange(result.selectionStart, result.selectionEnd);
-  });
 }
 
 export function TextField({
@@ -52,6 +30,28 @@ export function TextField({
   type?: string;
 }) {
   const filled = value.trim().length > 0;
+  // Non-text types stay native inputs (no WYSIWYG).
+  if (type !== "text") {
+    return (
+      <label className="block">
+        <span
+          className={clsx(
+            "mb-1.5 block text-[12px] font-medium",
+            filled ? "text-ink" : "text-ink-muted"
+          )}
+        >
+          {label}
+        </span>
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={fieldClass(filled)}
+        />
+      </label>
+    );
+  }
   return (
     <label className="block">
       <span
@@ -62,13 +62,10 @@ export function TextField({
       >
         {label}
       </span>
-      <input
-        type={type}
+      <RichTextInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => handleInlineBoldKeyDown(e, value, onChange)}
+        onChange={onChange}
         placeholder={placeholder}
-        className={fieldClass(filled)}
       />
     </label>
   );
@@ -100,13 +97,12 @@ export function TextAreaField({
           {label}
         </span>
       )}
-      <textarea
+      <RichTextInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => handleInlineBoldKeyDown(e, value, onChange)}
+        onChange={onChange}
         placeholder={placeholder}
+        multiline
         rows={rows}
-        className={fieldClass(filled, true)}
       />
     </label>
   );
@@ -231,13 +227,13 @@ export function SummaryField({
         {label}
       </span>
       <div className="flex items-center gap-2">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => handleInlineBoldKeyDown(e, value, onChange)}
-          placeholder="一句概括（可选）"
-          className={fieldClass(filled)}
-        />
+        <div className="min-w-0 flex-1">
+          <RichTextInput
+            value={value}
+            onChange={onChange}
+            placeholder="一句概括（可选）"
+          />
+        </div>
         {onToggleAI && (
           <button
             type="button"
@@ -294,15 +290,13 @@ export function BulletList({
             <div key={i} className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-ink-muted">•</span>
-                <input
-                  value={b}
-                  onChange={(e) => update(i, e.target.value)}
-                  onKeyDown={(e) =>
-                    handleInlineBoldKeyDown(e, b, (next) => update(i, next))
-                  }
-                  placeholder="一条成就或职责描述"
-                  className={fieldClass(b.trim().length > 0)}
-                />
+                <div className="min-w-0 flex-1">
+                  <RichTextInput
+                    value={b}
+                    onChange={(next) => update(i, next)}
+                    placeholder="一条成就或职责描述"
+                  />
+                </div>
                 {onToggleBulletAI && entryIndex !== undefined && sectionId && (
                   <button
                     type="button"
@@ -396,8 +390,6 @@ export function TagInput({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            handleInlineBoldKeyDown(e, draft, setDraft);
-            if (e.defaultPrevented) return;
             if (e.key === "Enter") {
               e.preventDefault();
               commit();

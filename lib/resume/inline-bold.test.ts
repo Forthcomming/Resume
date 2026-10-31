@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  editableHtmlToMarkdown,
+  markdownToEditableHtml,
   parseInlineBoldSegments,
   toggleInlineBoldMarkdown,
 } from "./inline-bold";
@@ -51,5 +53,24 @@ describe("parseInlineBoldSegments", () => {
     expect(parseInlineBoldSegments("半截 **未闭合")).toEqual([
       { type: "text", value: "半截 **未闭合" },
     ]);
+  });
+});
+
+describe("wysiwyg html round-trip", () => {
+  it("converts markdown to editable html", () => {
+    expect(markdownToEditableHtml("见 **重点**")).toBe(
+      "见 <strong>重点</strong>"
+    );
+  });
+
+  it("converts editable html back to markdown", () => {
+    expect(
+      editableHtmlToMarkdown("见 <strong>重点</strong><br>第二行")
+    ).toBe("见 **重点**\n第二行");
+  });
+
+  it("round-trips multiline bold markdown", () => {
+    const md = "**产品热情**：快速学习\n**用户体验**：打磨细节";
+    expect(editableHtmlToMarkdown(markdownToEditableHtml(md))).toBe(md);
   });
 });
