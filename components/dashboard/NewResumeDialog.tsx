@@ -207,21 +207,18 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
             <h2 className="text-[20px] font-semibold tracking-tight text-ink">
               开始新的简历
             </h2>
-            <p className="mt-1.5 text-[13px] text-ink-muted">
-              选择创建方式，AI 会帮助你完成结构化解析。
-            </p>
 
             <div className="mt-6 grid grid-cols-2 gap-4">
               <OptionCard
                 icon={UploadCloud}
                 title="上传已有简历"
-                description="支持 PDF、DOCX，AI 自动解析为模块化板块"
+                description="PDF / DOCX"
                 onClick={() => setStep("upload")}
               />
               <OptionCard
                 icon={PencilLine}
                 title="从零创建"
-                description="逐板块填写内容，AI 辅助撰写"
+                description="空白模板"
                 onClick={() => setStep("scratch")}
               />
             </div>
@@ -351,7 +348,6 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
               <Loader2 size={26} strokeWidth={2} className="animate-spin" />
             </span>
             <p className="text-[15px] font-semibold text-ink">上传中...</p>
-            <p className="text-[13px] text-ink-muted">正在上传你的简历文件</p>
           </div>
         )}
 
@@ -362,9 +358,6 @@ export function NewResumeDialog({ open, onClose }: NewResumeDialogProps) {
             </span>
             <p className="text-[15px] font-semibold text-ink">
               正在解析简历...
-            </p>
-            <p className="text-[13px] text-accent-ai">
-              识别板块结构，提取结构化内容
             </p>
           </div>
         )}

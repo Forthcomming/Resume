@@ -27,6 +27,7 @@ export function CustomSelect({
     options.find((opt) => opt.value === value) ??
     options.find((opt) => opt.value === "") ??
     options[0];
+  const filled = value.trim().length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -58,11 +59,15 @@ export function CustomSelect({
           "flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3.5 text-left transition-all",
           compact ? "text-[12px]" : "text-[13px]",
           open
-            ? "border-ink-soft/20 bg-white text-ink shadow-sm ring-2 ring-ink/5"
-            : "border-ink-soft/10 bg-white text-ink-soft hover:border-ink-soft/20 hover:text-ink"
+            ? "border-ink-soft/30 bg-white text-ink shadow-sm ring-2 ring-ink/5"
+            : filled
+              ? "border-ink-soft/25 bg-white text-ink hover:border-ink-soft/30"
+              : "border-ink-soft/10 bg-white text-ink-muted hover:border-ink-soft/20"
         )}
       >
-        <span className="truncate">{active?.label ?? "请选择"}</span>
+        <span className={clsx("truncate", !filled && "text-ink-muted")}>
+          {active?.label ?? "请选择"}
+        </span>
         <ChevronDown
           size={14}
           strokeWidth={2}

@@ -92,21 +92,24 @@ export function AIModal({
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-fog-soft/80 px-5 py-4">
           <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-2 text-accent-ai">
-              <Sparkles size={15} strokeWidth={2} />
-              <span className="text-[11px] font-medium uppercase tracking-wide">
-                AI 优化
-              </span>
+            <div className="flex items-start gap-2">
+              <Sparkles
+                size={15}
+                strokeWidth={2}
+                className="mt-1 shrink-0 text-accent-ai"
+              />
+              <div className="min-w-0">
+                <h2
+                  id="ai-modal-title"
+                  className="text-[16px] font-semibold tracking-tight text-ink"
+                >
+                  {title}
+                </h2>
+                {subtitle && (
+                  <p className="mt-1 text-[12px] text-ink-muted">{subtitle}</p>
+                )}
+              </div>
             </div>
-            <h2
-              id="ai-modal-title"
-              className="text-[16px] font-semibold tracking-tight text-ink"
-            >
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1 text-[12px] text-ink-muted">{subtitle}</p>
-            )}
           </div>
           <button
             type="button"
@@ -119,10 +122,6 @@ export function AIModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          <p className="mb-4 rounded-xl border border-accent-ai/15 bg-accent-ai/[0.05] px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
-            AI 仅提供参考建议，不会自动修改您的简历。请对比原文与建议后，自行决定是否采纳。
-          </p>
-
           {!showDiff && !showClarification && (
             <AIOriginalPanel text={originalText} compact={!!pendingAIEdit} />
           )}
@@ -146,9 +145,6 @@ export function AIModal({
               <p className="text-[13px] font-medium text-ink">
                 AI 正在判断哪些信息足以支持改写…
               </p>
-              <p className="text-[12px] text-ink-muted">
-                信息足够会直接生成；缺少关键事实时会先追问
-              </p>
             </div>
           )}
 
@@ -161,9 +157,6 @@ export function AIModal({
               />
               <p className="text-[13px] font-medium text-ink">
                 AI 正在根据补充事实生成建议…
-              </p>
-              <p className="text-[12px] text-ink-muted">
-                生成完成后将展示对比，由您决定是否采纳
               </p>
             </div>
           )}

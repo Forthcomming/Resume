@@ -89,8 +89,7 @@ export function ApiKeySetupModal({
           配置 DeepSeek API Key
         </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-landing-muted">
-          AI 解析与改写需要你自己的 DeepSeek Key。Key 仅保存在本机浏览器，请求时传给服务端调用
-          DeepSeek，不会写入我们的数据库。也可先跳过，稍后在设置页补配。
+          Key 仅保存在本机浏览器。可先跳过，稍后在设置页补配。
         </p>
 
         <label className="mt-5 block">

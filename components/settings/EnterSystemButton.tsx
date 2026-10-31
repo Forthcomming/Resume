@@ -80,9 +80,6 @@ export function EnterSystemButton({
                 <p className="text-[16px] font-semibold text-landing-ink">
                   正在进入…
                 </p>
-                <p className="text-center text-[13px] leading-relaxed text-landing-muted">
-                  正在进入工作台，请稍候
-                </p>
               </div>
             </div>,
             document.body

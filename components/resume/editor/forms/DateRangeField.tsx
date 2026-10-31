@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import {
   DATE_DISPLAY_FORMAT_OPTIONS,
   normalizeMonthValue,
@@ -19,9 +20,15 @@ export function SelectField({
   onChange: (v: string) => void;
   options: readonly { value: string; label: string }[];
 }) {
+  const filled = value.trim().length > 0;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-ink-soft">
+      <span
+        className={clsx(
+          "mb-1.5 block text-[12px] font-medium",
+          filled ? "text-ink" : "text-ink-muted"
+        )}
+      >
         {label}
       </span>
       <CustomSelect
@@ -52,10 +59,19 @@ export function DateRangeField({
   const isPresent = endDate.trim() === "present";
   const startValue = normalizeMonthValue(startDate);
   const endValue = isPresent ? "" : normalizeMonthValue(endDate);
+  const filled =
+    /^\d{4}-\d{2}$/.test(startValue) ||
+    isPresent ||
+    /^\d{4}-\d{2}$/.test(endValue);
 
   return (
     <div className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-ink-soft">
+      <span
+        className={clsx(
+          "mb-1.5 block text-[12px] font-medium",
+          filled ? "text-ink" : "text-ink-muted"
+        )}
+      >
         {label}
       </span>
       <div className="flex flex-wrap items-center gap-2">

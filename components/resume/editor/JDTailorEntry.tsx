@@ -25,9 +25,6 @@ export function JDTailorEntry({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-ink">按 JD 生成定制版</p>
-          <p className="mt-0.5 truncate text-[11px] text-ink-muted">
-            先匹配岗位要求与经历证据，再创建新副本
-          </p>
         </div>
 
         {saveState === "error" ? (

@@ -11,9 +11,6 @@ export default function SettingsPage() {
         <h1 className="text-[22px] font-semibold tracking-tight text-ink">
           设置
         </h1>
-        <p className="mt-1 text-[13px] text-ink-muted">
-          管理 AI 相关配置
-        </p>
         <div className="mt-6">
           <ApiKeySettingsForm />
         </div>

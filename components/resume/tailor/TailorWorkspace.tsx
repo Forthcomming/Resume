@@ -323,7 +323,6 @@ export function TailorWorkspace({
                 <Target size={20} />
               </span>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink">这次投递，需要突出什么？</h1>
-              <p className="mt-2 text-sm text-ink-muted">AI 会先找岗位要求与简历证据，再推荐版本切换或具体 Bullet 改写。</p>
             </div>
             <div className="glass-panel space-y-5 rounded-3xl p-6 sm:p-8">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -382,8 +381,7 @@ export function TailorWorkspace({
               </section>
 
               <section className="glass-panel rounded-3xl p-5 sm:p-6">
-                <div className="mb-1 flex items-center gap-2"><Sparkles size={17} /><h2 className="font-semibold text-ink">2. 推荐动作</h2></div>
-                <p className="mb-4 text-xs text-ink-muted">勾选你认可的调整。只有勾选项会写入新副本。</p>
+                <div className="mb-4 flex items-center gap-2"><Sparkles size={17} /><h2 className="font-semibold text-ink">2. 推荐动作</h2></div>
                 {selectableActions.length ? <div className="space-y-3">{selectableActions.map((action) => {
                   const checked = selected.actionIds.includes(action.id);
                   const entry = "entryId" in action ? store.entrySections[action.sectionId].entries[action.entryId] : null;
@@ -421,7 +419,6 @@ export function TailorWorkspace({
               <label className="mt-5 block text-xs font-medium text-ink">新简历名称<input value={outputTitle} onChange={(event) => setOutputTitle(event.target.value)} className="glass-control mt-2 h-10 w-full rounded-xl px-3 text-sm outline-none focus:ring-2 focus:ring-ink/10" /></label>
               <div className="mt-4 rounded-2xl bg-white/55 p-3 text-xs text-ink-muted"><div className="flex justify-between"><span>推荐调整</span><span>{selectableActions.length} 项</span></div><div className="mt-2 flex justify-between font-medium text-ink"><span>将应用</span><span>{selectedCount} 项</span></div></div>
               <button type="button" onClick={() => void createCopy()} disabled={creating} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-semibold text-white hover:bg-[#26384a] disabled:opacity-60">{creating ? <Loader2 size={15} className="animate-spin" /> : <FilePlus2 size={15} />}{creating ? "正在创建…" : "创建定制版"}</button>
-              <p className="mt-3 text-center text-[11px] text-ink-muted">创建后进入新简历编辑器，可继续手动调整</p>
             </aside>
           </div>
         )}

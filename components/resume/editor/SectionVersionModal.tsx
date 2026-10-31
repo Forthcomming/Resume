@@ -101,23 +101,14 @@ export function SectionVersionModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-fog-soft/80 px-5 py-4">
-          <div>
-            <div className="mb-1 flex items-center gap-2 text-ink-muted">
-              <Layers size={15} strokeWidth={2} />
-              <span className="text-[11px] font-medium uppercase tracking-wide">
-                子版本管理
-              </span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Layers size={15} strokeWidth={2} className="shrink-0 text-ink-muted" />
             <h2
               id="section-version-modal-title"
               className="text-[16px] font-semibold tracking-tight text-ink"
             >
               {sectionTitle}
             </h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-ink-muted">
-              为「{sectionTitle}」准备多套内容，投递不同岗位时切换使用。
-              <span className="text-ink-soft"> 仅替换当前内容模块，简历其他部分不变。</span>
-            </p>
           </div>
           <button
             type="button"

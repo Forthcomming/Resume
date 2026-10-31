@@ -89,11 +89,13 @@ export function MonthPicker({
           "flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3.5 text-left text-[13px] transition-all",
           disabled && "cursor-not-allowed opacity-50",
           open
-            ? "border-ink-soft/20 bg-white text-ink shadow-sm ring-2 ring-ink/5"
-            : "border-ink-soft/10 bg-white text-ink-soft hover:border-ink-soft/20 hover:text-ink"
+            ? "border-ink-soft/30 bg-white text-ink shadow-sm ring-2 ring-ink/5"
+            : parsed
+              ? "border-ink-soft/25 bg-white text-ink hover:border-ink-soft/30"
+              : "border-ink-soft/10 bg-white text-ink-muted hover:border-ink-soft/20"
         )}
       >
-        <span className={clsx("truncate", !parsed && "text-ink-muted")}>
+        <span className="truncate">
           {parsed ? formatMonthValue(parsed.year, parsed.month) : "请选择"}
         </span>
         <Calendar size={14} strokeWidth={2} className="shrink-0 text-ink-muted" />
