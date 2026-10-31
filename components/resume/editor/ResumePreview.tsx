@@ -10,11 +10,26 @@ import {
   type DateDisplayFormat,
 } from "@/lib/resume/date-display";
 import { resumeStyleCssVars } from "@/lib/resume/density";
+import { parseInlineBoldSegments } from "@/lib/resume/inline-bold";
 import type { SectionId } from "@/lib/resume/versions";
 import {
   DEFAULT_SECTION_LABELS,
   SECTION_IDS,
 } from "@/lib/resume/versions";
+
+function InlineBoldText({ text }: { text: string }) {
+  return (
+    <>
+      {parseInlineBoldSegments(text).map((segment, index) =>
+        segment.type === "bold" ? (
+          <strong key={index}>{segment.value}</strong>
+        ) : (
+          <span key={index}>{segment.value}</span>
+        )
+      )}
+    </>
+  );
+}
 
 interface ResumePreviewProps {
   title: string;
@@ -94,7 +109,7 @@ function BasicInfoPreviewLines({
     <>
       {contactLine ? (
         <p className="mt-[var(--resume-header-gap)] text-center text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#333]">
-          {contactLine}
+          <InlineBoldText text={contactLine} />
         </p>
       ) : !hasHeaderInfo ? (
         <p className="mt-[var(--resume-header-gap)] text-center text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#999]">
@@ -106,7 +121,7 @@ function BasicInfoPreviewLines({
           key={line}
           className="mt-[calc(var(--resume-header-gap)*0.75)] text-center text-[length:var(--resume-meta-size)] leading-[var(--resume-leading)] text-[#555]"
         >
-          {line}
+          <InlineBoldText text={line} />
         </p>
       ))}
     </>
@@ -132,7 +147,7 @@ function Bullets({ items }: { items: string[] }) {
     <ul className="mt-0.5 list-disc space-y-[0.12rem] pl-[1.1em] text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
       {visible.map((b, i) => (
         <li key={i} data-resume-break>
-          {b}
+          <InlineBoldText text={b} />
         </li>
       ))}
     </ul>
@@ -144,7 +159,7 @@ function EntrySummary({ text }: { text?: string }) {
   if (!value) return null;
   return (
     <p className="mt-0.5 text-[length:var(--resume-body-size)] font-bold leading-[var(--resume-leading)] text-[#222]">
-      {value}
+      <InlineBoldText text={value} />
     </p>
   );
 }
@@ -186,7 +201,7 @@ function SummaryBlock({
     <section data-resume-break>
       <SectionTitle>{title}</SectionTitle>
       <p className="whitespace-pre-wrap text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]">
-        {content.text}
+        <InlineBoldText text={content.text} />
       </p>
     </section>
   );
@@ -210,8 +225,8 @@ function WorkBlock({
         {content.entries.map((e, i) => (
           <div key={i} data-resume-break>
             <EntryMetaRow
-              left={e.company || "—"}
-              center={e.title}
+              left={<InlineBoldText text={e.company || "—"} />}
+              center={e.title ? <InlineBoldText text={e.title} /> : undefined}
               right={[
                 dateRange(e.startDate, e.endDate, dateDisplayFormat),
                 e.location,
@@ -246,13 +261,13 @@ function ProjectBlock({
         {content.entries.map((e, i) => (
           <div key={i} data-resume-break>
             <EntryMetaRow
-              left={e.name || "—"}
-              center={e.role}
+              left={<InlineBoldText text={e.name || "—"} />}
+              center={e.role ? <InlineBoldText text={e.role} /> : undefined}
               right={dateRange(e.startDate, e.endDate, dateDisplayFormat)}
             />
             {e.techStack.length > 0 && (
               <p className="mt-0.5 text-[length:var(--resume-meta-size)] text-[#666]">
-                {e.techStack.join(" / ")}
+                <InlineBoldText text={e.techStack.join(" / ")} />
               </p>
             )}
             <EntrySummary text={e.summary} />
@@ -289,7 +304,9 @@ function EducationBlock({
               <EntryMetaRow
                 left={
                   <span className="inline-flex flex-wrap items-center gap-1.5">
-                    <span>{schoolLabel || "—"}</span>
+                    <span>
+                      <InlineBoldText text={schoolLabel || "—"} />
+                    </span>
                     {e.schoolTag ? (
                       <span className="rounded bg-[#eceff3] px-1.5 py-0.5 text-[9px] font-medium text-[#555]">
                         {e.schoolTag}
@@ -297,12 +314,16 @@ function EducationBlock({
                     ) : null}
                   </span>
                 }
-                center={centerLabel}
+                center={
+                  centerLabel ? (
+                    <InlineBoldText text={centerLabel} />
+                  ) : undefined
+                }
                 right={dateRange(e.startDate, e.endDate, dateDisplayFormat)}
               />
               {e.gpa ? (
                 <p className="mt-0.5 text-[length:var(--resume-body-size)] text-[#444]">
-                  GPA {e.gpa}
+                  GPA <InlineBoldText text={e.gpa} />
                 </p>
               ) : null}
               <Bullets items={e.notes} />
@@ -335,8 +356,12 @@ function SkillsBlock({
             data-resume-break
             className="text-[length:var(--resume-body-size)] leading-[var(--resume-leading)] text-[#222]"
           >
-            {c.label && <span className="font-semibold">{c.label}：</span>}
-            {c.items.join("、")}
+            {c.label ? (
+              <span className="font-semibold">
+                <InlineBoldText text={c.label} />：
+              </span>
+            ) : null}
+            <InlineBoldText text={c.items.join("、")} />
           </p>
         ))}
       </div>
@@ -365,7 +390,7 @@ function BasicInfoHeader({
       ) : null}
       <div>
         <h1 className="text-center text-[length:var(--resume-name-size)] font-bold leading-tight tracking-tight text-[#111]">
-          {basic_info.name || "你的姓名"}
+          <InlineBoldText text={basic_info.name || "你的姓名"} />
         </h1>
         <BasicInfoPreviewLines basic_info={basic_info} title={title} />
       </div>
@@ -426,7 +451,7 @@ export function ResumePreview({
   sectionTitles,
   dateDisplayFormat = DEFAULT_DATE_DISPLAY_FORMAT,
 }: ResumePreviewProps) {
-  const { basic_info, summary, work, education, project, skills } = content;
+  const { basic_info } = content;
   const measureRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(1);
   const [pageHeightPx, setPageHeightPx] = useState(0);
@@ -445,13 +470,6 @@ export function ResumePreview({
     }
     return next;
   }, [sectionOrder]);
-
-  const hasAnyBody =
-    summary.text.trim() ||
-    work.entries.some((e) => e.company || e.title) ||
-    project.entries.some((e) => e.name) ||
-    education.entries.some((e) => e.school || e.major) ||
-    skills.categories.some((c) => c.label || c.items.length > 0);
 
   const styleVars = resumeStyleCssVars();
 
@@ -483,11 +501,6 @@ export function ResumePreview({
         )
       )}
 
-      {!hasAnyBody && (
-        <p className="text-[length:var(--resume-body-size)] italic text-[#bbb]">
-          在左侧填写内容后将在此处实时预览
-        </p>
-      )}
     </div>
   );
 
