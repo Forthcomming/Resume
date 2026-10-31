@@ -160,6 +160,48 @@ export function AddButton({
   );
 }
 
+/** Optional one-line entry summary with optional AI trigger (Task 6 wires AI). */
+export function SummaryField({
+  label = "总结句",
+  value,
+  onChange,
+  aiOpen,
+  onToggleAI,
+}: {
+  label?: string;
+  value: string;
+  onChange: (next: string) => void;
+  aiOpen?: boolean;
+  onToggleAI?: () => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1 block text-[12px] font-medium text-ink-soft">{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="一句概括（可选，预览加粗无点）"
+          className={inputClass}
+        />
+        {onToggleAI && (
+          <button
+            type="button"
+            onClick={onToggleAI}
+            aria-label="AI 优化总结句"
+            className={clsx(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent-ai transition-colors hover:bg-accent-ai/10",
+              aiOpen && "bg-accent-ai/15 ring-2 ring-accent-ai/20"
+            )}
+          >
+            <Sparkles size={14} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Editable list of bullet lines, each with add/remove and optional AI trigger. */
 export function BulletList({
   label,

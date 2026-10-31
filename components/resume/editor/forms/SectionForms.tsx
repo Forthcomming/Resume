@@ -8,6 +8,7 @@ import {
   EntryCard,
   AddButton,
   BulletList,
+  SummaryField,
   TagInput,
 } from "./fields";
 import { DateRangeField, SelectField } from "./DateRangeField";
@@ -446,6 +447,12 @@ function WorkExperienceForm({
             </div>
           </div>
           <div className="mt-3">
+            <SummaryField
+              value={e.summary ?? ""}
+              onChange={(summary) => update(i, { summary })}
+            />
+          </div>
+          <div className="mt-3">
             <BulletList
               label="工作内容"
               bullets={e.bullets}
@@ -546,6 +553,12 @@ function ProjectForm({
           </div>
           <div className="mt-3">
             <TagInput label="技术栈" tags={e.techStack} onChange={(techStack) => update(i, { techStack })} placeholder="如 React，回车添加" />
+          </div>
+          <div className="mt-3">
+            <SummaryField
+              value={e.summary ?? ""}
+              onChange={(summary) => update(i, { summary })}
+            />
           </div>
           <div className="mt-3">
             <BulletList
