@@ -73,4 +73,9 @@ describe("wysiwyg html round-trip", () => {
     const md = "**产品热情**：快速学习\n**用户体验**：打磨细节";
     expect(editableHtmlToMarkdown(markdownToEditableHtml(md))).toBe(md);
   });
+
+  it("keeps a single trailing newline from Enter", () => {
+    expect(editableHtmlToMarkdown("第一行<br>")).toBe("第一行\n");
+    expect(editableHtmlToMarkdown("第一行<div><br></div>")).toBe("第一行\n");
+  });
 });

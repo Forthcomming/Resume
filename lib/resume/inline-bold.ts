@@ -116,9 +116,21 @@ function stripTagsToText(html: string): string {
 /**
  * contentEditable HTML → markdown with `**bold**`.
  * Handles strong/b, br, and simple div/p line breaks.
+ * Preserves trailing newlines so a single Enter is not eaten on emit.
  */
 export function editableHtmlToMarkdown(html: string): string {
-  if (!html || html === "<br>" || html === "<br/>") return "";
+  if (!html) return "";
+  const trimmedHtml = html.replace(/^\s+|\s+$/g, "");
+  if (
+    !trimmedHtml ||
+    trimmedHtml === "<br>" ||
+    trimmedHtml === "<br/>" ||
+    trimmedHtml === "<br />" ||
+    trimmedHtml === "<div><br></div>" ||
+    trimmedHtml === "<div><br/></div>"
+  ) {
+    return "";
+  }
 
   let s = html.replace(/\u00a0/g, " ").replace(/&nbsp;/gi, " ");
   // Innermost bold first so nested <strong> flattens into one pair.
@@ -133,11 +145,17 @@ export function editableHtmlToMarkdown(html: string): string {
     if (next === s) break;
     s = next;
   }
+  // Chrome often wraps lines in <div>; treat each block as one line.
+  s = s.replace(/<div(?:\s[^>]*)?><br\s*\/?><\/div>/gi, "\n");
+  s = s.replace(/<div(?:\s[^>]*)?>/gi, "\n");
+  s = s.replace(/<\/div>/gi, "");
+  s = s.replace(/<p(?:\s[^>]*)?>/gi, "\n");
+  s = s.replace(/<\/p>/gi, "");
   s = s.replace(/<br\s*\/?>/gi, "\n");
-  s = s.replace(/<\/(?:div|p)>/gi, "\n");
-  s = s.replace(/<(?:div|p)(?:\s[^>]*)?>/gi, "");
   s = stripTagsToText(s);
+  // Leading newline appears when content starts with a <div>
+  s = s.replace(/^\n/, "");
   s = s.replace(/\n{3,}/g, "\n\n");
   if (!s.replace(/\n/g, "").trim()) return "";
-  return s.replace(/\n+$/g, "");
+  return s;
 }

@@ -16,11 +16,9 @@ import {
 
 function richFieldClass(filled: boolean, multiline: boolean) {
   return clsx(
-    "w-full rounded-xl border bg-white px-3.5 text-[13px] outline-none transition-colors focus:border-ink-soft/30 focus:text-ink focus:ring-2 focus:ring-ink/5",
-    multiline ? "resize-y py-2.5 leading-relaxed" : "flex h-10 items-center",
-    filled
-      ? "border-ink-soft/25 text-ink"
-      : "border-ink-soft/10 text-ink placeholder:text-ink-muted"
+    "w-full rounded-xl border bg-white px-3.5 text-[13px] text-ink caret-ink outline-none transition-colors focus:border-ink-soft/30 focus:ring-2 focus:ring-ink/5",
+    multiline ? "py-2.5 leading-relaxed" : "h-10 py-2 leading-6",
+    filled ? "border-ink-soft/25" : "border-ink-soft/10"
   );
 }
 
@@ -43,10 +41,10 @@ export function RichTextInput({
   const lastEmitted = useRef(value);
   const [focused, setFocused] = useState(false);
 
+  // Only sync DOM from props when not focused — rewriting innerHTML kills the caret.
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    if (focused && value === lastEmitted.current) return;
+    if (!el || focused) return;
     const current = editableHtmlToMarkdown(el.innerHTML);
     if (current === value) {
       lastEmitted.current = value;
@@ -76,8 +74,15 @@ export function RichTextInput({
       emit();
       return;
     }
-    if (!multiline && event.key === "Enter") {
+    if (event.key === "Enter") {
+      if (!multiline) {
+        event.preventDefault();
+        return;
+      }
+      // One Enter → one line break (avoid Chrome's empty <div> needing a second press).
       event.preventDefault();
+      document.execCommand("insertLineBreak");
+      emit();
     }
   };
 
