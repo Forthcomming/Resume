@@ -62,6 +62,8 @@ export interface WorkEntry {
   location: string;
   startDate: string;
   endDate: string;
+  /** Optional one-line summary shown bold above bullets */
+  summary?: string;
   bullets: string[];
 }
 
@@ -76,6 +78,8 @@ export interface ProjectEntry {
   endDate: string;
   techStack: string[];
   link: string;
+  /** Optional one-line summary shown bold above bullets */
+  summary?: string;
   bullets: string[];
 }
 
@@ -164,6 +168,7 @@ export function emptyWorkEntry(): WorkEntry {
     location: "",
     startDate: "",
     endDate: "",
+    summary: "",
     bullets: [""],
   };
 }
@@ -176,7 +181,79 @@ export function emptyProjectEntry(): ProjectEntry {
     endDate: "",
     techStack: [],
     link: "",
+    summary: "",
     bullets: [""],
+  };
+}
+
+/** Heuristic: short first-bullet text that looks like a role summary (strict; prefer miss over false promote). */
+export function looksLikeEntrySummary(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 8 || t.length > 48) return false;
+  if ((t.match(/[；;、]/g) ?? []).length >= 2) return false;
+  if (/等$|等等$/.test(t)) return false;
+  return true;
+}
+
+/** Promote first bullet to summary when missing and it looks like a summary. */
+export function maybePromoteEntrySummary(entry: {
+  summary?: string;
+  bullets: string[];
+}): { summary: string; bullets: string[] } {
+  const bullets = Array.isArray(entry.bullets) ? entry.bullets : [];
+  const existing = (entry.summary ?? "").trim();
+  if (existing) {
+    return { summary: entry.summary ?? "", bullets };
+  }
+  if (bullets.length < 2) {
+    return { summary: "", bullets };
+  }
+  const first = bullets[0] ?? "";
+  if (!looksLikeEntrySummary(first)) {
+    return { summary: "", bullets };
+  }
+  return {
+    summary: first.trim(),
+    bullets: bullets.slice(1),
+  };
+}
+
+export function normalizeWorkEntry(
+  raw: Partial<WorkEntry> | null | undefined
+): WorkEntry {
+  const base = emptyWorkEntry();
+  if (!raw) return base;
+  const merged: WorkEntry = {
+    ...base,
+    ...raw,
+    summary: typeof raw.summary === "string" ? raw.summary : base.summary,
+    bullets: Array.isArray(raw.bullets) ? raw.bullets : base.bullets,
+  };
+  const promoted = maybePromoteEntrySummary(merged);
+  return {
+    ...merged,
+    summary: promoted.summary,
+    bullets: promoted.bullets.length > 0 ? promoted.bullets : [""],
+  };
+}
+
+export function normalizeProjectEntry(
+  raw: Partial<ProjectEntry> | null | undefined
+): ProjectEntry {
+  const base = emptyProjectEntry();
+  if (!raw) return base;
+  const merged: ProjectEntry = {
+    ...base,
+    ...raw,
+    summary: typeof raw.summary === "string" ? raw.summary : base.summary,
+    techStack: Array.isArray(raw.techStack) ? raw.techStack : base.techStack,
+    bullets: Array.isArray(raw.bullets) ? raw.bullets : base.bullets,
+  };
+  const promoted = maybePromoteEntrySummary(merged);
+  return {
+    ...merged,
+    summary: promoted.summary,
+    bullets: promoted.bullets.length > 0 ? promoted.bullets : [""],
   };
 }
 
@@ -207,13 +284,19 @@ export function normalizeResumeContent(
   return {
     basic_info: { ...base.basic_info, ...raw.basic_info },
     summary: { ...base.summary, ...raw.summary },
-    work: { entries: raw.work?.entries ?? base.work.entries },
+    work: {
+      entries: (raw.work?.entries ?? base.work.entries).map(normalizeWorkEntry),
+    },
     education: {
       entries: (raw.education?.entries ?? base.education.entries).map(
         normalizeEducationEntry
       ),
     },
-    project: { entries: raw.project?.entries ?? base.project.entries },
+    project: {
+      entries: (raw.project?.entries ?? base.project.entries).map(
+        normalizeProjectEntry
+      ),
+    },
     skills: { categories: raw.skills?.categories ?? base.skills.categories },
   };
 }
